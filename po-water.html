@@ -36,7 +36,7 @@ const CONFIG = {
   appTitle: "Water Coach",
 
   // Default unit. Options: "bottle" | "glass" | "oz" | "ml"
-  unit: "bottle",
+  unit: "oz",
 
   // Volume per "bottle" / "glass" in ml. 500 = standard water bottle,
   // 250 = a typical drinking glass.
@@ -732,7 +732,7 @@ html, body {
     s.unit = s.unit || CONFIG.unit || 'bottle';
     s.bottleMl = s.bottleMl || CONFIG.bottleMl || 500;
     s.glassMl  = s.glassMl  || CONFIG.glassMl  || 250;
-    s.weightUnit = s.weightUnit || 'kg';
+    s.weightUnit = s.weightUnit || 'lb';
     s.profile = Object.assign({}, CONFIG.profile, s.profile || {});
     s.caffeineMgPerDay = (s.caffeineMgPerDay != null) ? s.caffeineMgPerDay : (CONFIG.caffeineMgPerDay || 200);
     s.substances = Array.isArray(s.substances) ? s.substances : (CONFIG.defaultSubstances || []);

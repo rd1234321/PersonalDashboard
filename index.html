@@ -684,11 +684,11 @@ body {
     <div class="field">
       <label class="field-label">Height</label>
       <div class="field-row">
-        <input class="set-input" id="heightA" type="number" min="0" inputmode="decimal" placeholder="cm">
-        <input class="set-input" id="heightB" type="number" min="0" inputmode="decimal" placeholder="in" style="display:none">
+        <input class="set-input" id="heightA" type="number" min="0" inputmode="decimal" placeholder="ft">
+        <input class="set-input" id="heightB" type="number" min="0" inputmode="decimal" placeholder="in">
         <div class="seg" id="heightUnitSeg">
-          <button type="button" data-u="cm" class="on">cm</button>
-          <button type="button" data-u="ft">ft/in</button>
+          <button type="button" data-u="cm">cm</button>
+          <button type="button" data-u="ft" class="on">ft/in</button>
         </div>
       </div>
     </div>
@@ -698,8 +698,8 @@ body {
       <div class="field-row">
         <input class="set-input" id="weight" type="number" min="0" inputmode="decimal" placeholder="weight">
         <div class="seg" id="weightUnitSeg">
-          <button type="button" data-u="kg" class="on">kg</button>
-          <button type="button" data-u="lb">lb</button>
+          <button type="button" data-u="kg">kg</button>
+          <button type="button" data-u="lb" class="on">lb</button>
         </div>
       </div>
     </div>
@@ -738,14 +738,14 @@ body {
 
   // Mirror of topbar.js defaultWaterState so we never clobber the water tracker.
   function defaultWater() {
-    return { unit:'bottle', bottleMl:500, glassMl:250, weightUnit:'kg',
+    return { unit:'oz', bottleMl:500, glassMl:250, weightUnit:'lb',
       profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
       caffeineMgPerDay:200, substances:[], logs:{} };
   }
 
   /* ---------- unit state ---------- */
-  let heightUnit = 'cm';   // 'cm' | 'ft'
-  let weightUnit = 'kg';   // 'kg' | 'lb'
+  let heightUnit = 'ft';   // 'cm' | 'ft'
+  let weightUnit = 'lb';   // 'kg' | 'lb'
   let sex = 'm';
 
   function setHeightUnit(u) {
@@ -781,8 +781,8 @@ body {
   function populate() {
     const w = loadJSON(WATER_KEY, defaultWater());
     const p = w.profile || {};
-    setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
-    setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
+    setWeightUnit(w.weightUnit === 'kg' ? 'kg' : 'lb');
+    setHeightUnit(p.heightUnit === 'cm' ? 'cm' : 'ft');
     setSex(p.sex === 'f' ? 'f' : 'm');
     fillHeight(p.heightCm || null);
     if (p.weightKg) $('weight').value = weightUnit === 'lb' ? Math.round(p.weightKg * 2.20462) : Math.round(p.weightKg);

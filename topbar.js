@@ -414,7 +414,7 @@ body.topbar-modal-open {
   // -------- Water +1 (works from any page) --------
   function defaultWaterState() {
     return {
-      unit: 'bottle', bottleMl: 500, glassMl: 250, weightUnit: 'kg',
+      unit: 'oz', bottleMl: 500, glassMl: 250, weightUnit: 'lb',
       profile: { weightKg: 75, age: 25, sex: 'm', activityHrsPerWeek: 5 },
       caffeineMgPerDay: 200, substances: [], logs: {}
     };
