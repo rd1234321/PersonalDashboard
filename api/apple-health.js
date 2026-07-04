@@ -61,6 +61,45 @@ function friendlyLabel(name) {
   return FRIENDLY[name] || String(name).replace(/_/g, ' ');
 }
 
+// Metrics HealthKit tracks as running totals (steps, energy, distance, ...)
+// need their raw samples SUMMED per day. Health Auto Export often sends one
+// row per sample (sometimes dozens a day), not one pre-summed row per day —
+// averaging or taking "the last sample" on those gives nonsense numbers
+// (e.g. "4 steps"). Everything else (heart rate, HRV, weight, ...) is a
+// point-in-time reading, so those get averaged per day instead.
+const SUM_METRICS = new Set([
+  'step_count', 'active_energy', 'basal_energy_burned', 'flights_climbed',
+  'apple_exercise_time', 'apple_stand_time', 'apple_stand_hour',
+  'distance_walking_running', 'distance_cycling', 'distance_swimming',
+  'swimming_stroke_count', 'push_count', 'dietary_energy', 'water',
+]);
+
+function dayKey(dateStr) {
+  if (!dateStr) return null;
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(dateStr);
+  if (m) return m[1];
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+// Collapse however many raw samples came in per day down to one point per
+// day — summed for running-total metrics, averaged for everything else.
+function aggregateByDay(rawPoints, sum) {
+  const byDay = new Map();
+  for (const p of rawPoints) {
+    const key = dayKey(p.date);
+    if (!key) continue;
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(p.value);
+  }
+  const out = [];
+  for (const [day, vals] of byDay.entries()) {
+    const value = sum ? vals.reduce((a, b) => a + b, 0) : vals.reduce((a, b) => a + b, 0) / vals.length;
+    out.push({ date: day, value });
+  }
+  return out;
+}
+
 // Merge newly-received points into whatever history is already
 // stored for this metric, de-duped by date, capped to the most
 // recent 60 so the row doesn't grow without bound.
@@ -118,9 +157,11 @@ export default async function handler(req, res) {
   const summary = {};
   for (const m of metrics) {
     if (!m || !m.name || !Array.isArray(m.data) || !m.data.length) continue;
-    const incomingPoints = m.data
+    const rawPoints = m.data
       .map(p => ({ date: p && p.date, value: pickValue(p) }))
       .filter(p => p.date && p.value != null);
+    if (!rawPoints.length) continue;
+    const incomingPoints = aggregateByDay(rawPoints, SUM_METRICS.has(m.name));
     if (!incomingPoints.length) continue;
     const prior = existingMetrics[m.name];
     const points = mergeHistory(prior && prior.points, incomingPoints);

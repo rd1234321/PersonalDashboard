@@ -520,6 +520,24 @@ main {
     .wh-refresh:hover { background:rgba(63,217,255,0.12); color:var(--text-primary); }
     .wh-refresh.spin { transform:rotate(360deg); }
 
+    /* Featured metric — one big bar chart up top */
+    .ah-hero {
+      position: relative;
+      background: rgba(63,217,255,0.045);
+      border: none; margin-bottom: 12px; padding: 18px 20px 16px;
+      overflow: hidden;
+    }
+    .ah-hero::before, .ah-hero::after { content:''; position:absolute; width:18px; height:18px; pointer-events:none; }
+    .ah-hero::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-hero::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-hero-top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+    .ah-hero-label { font-size:11px; font-weight:700; letter-spacing:0.18em; color:var(--text-tertiary); }
+    .ah-hero-val { font-size:46px; font-weight:700; line-height:1; color:var(--text-primary); font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+    .ah-hero-units { font-size:14px; color:var(--text-tertiary); margin-left:6px; font-weight:600; }
+    .ah-hero-trend { font-size:12px; font-family:var(--font-mono); color:var(--text-tertiary); padding-bottom:8px; }
+    .ah-hero-chart { width:100%; height:120px; display:block; }
+    .ah-hero-range { display:flex; justify-content:space-between; margin-top:6px; font-size:9.5px; color:var(--text-tertiary); letter-spacing:0.06em; }
+
     .ah-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -535,15 +553,16 @@ main {
     .ah-metric::before, .ah-metric::after { content:''; position:absolute; width:10px; height:10px; pointer-events:none; }
     .ah-metric::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); opacity:0.6; }
     .ah-metric::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); opacity:0.6; }
-    .ah-metric-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:2px; }
-    .ah-metric-label { font-size:10px; font-weight:700; letter-spacing:0.12em; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .ah-metric-trend { font-size:10px; font-family:var(--font-mono); color:var(--text-tertiary); flex-shrink:0; }
+    .ah-metric-top { margin-bottom:2px; }
+    .ah-metric-label { display:block; font-size:10px; font-weight:700; letter-spacing:0.12em; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ah-metric-val-row { display:flex; align-items:baseline; justify-content:space-between; gap:6px; }
+    .ah-metric-trend { font-size:9.5px; font-family:var(--font-mono); color:var(--text-tertiary); flex-shrink:0; white-space:nowrap; }
     .ah-metric-val { font-size:22px; font-weight:700; color:var(--text-primary); line-height:1.15; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
     .ah-metric-units { font-size:10.5px; color:var(--text-tertiary); margin-left:4px; font-weight:600; }
     .ah-metric-chart { width:100%; height:38px; margin-top:8px; display:block; }
     .ah-metric-days { font-size:9px; color:var(--text-tertiary); letter-spacing:0.08em; margin-top:2px; }
-    .ah-spark-line { filter: drop-shadow(0 0 3px var(--ah-c, var(--hud-cyan))); }
-    @media (max-width:480px) { .ah-grid { grid-template-columns: repeat(2, 1fr); } }
+    .ah-bars rect:last-of-type { filter: drop-shadow(0 0 6px var(--ah-c, var(--hud-cyan))); }
+    @media (max-width:480px) { .ah-grid { grid-template-columns: repeat(2, 1fr); } .ah-hero-val { font-size:36px; } }
   </style>
   <div class="section-title">Apple Health</div>
   <div class="ah-card">
@@ -560,6 +579,7 @@ main {
           <button id="ahRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
         </div>
       </div>
+      <div id="ahHero"></div>
       <div id="ahGrid" class="ah-grid"></div>
     </div>
   </div>
@@ -588,33 +608,36 @@ main {
       return Math.floor(s / 86400) + ' d ago';
     }
 
-    function sparklineSVG(points, color) {
+    function lastN(points, n) { return points.length > n ? points.slice(-n) : points; }
+
+    function barsSVG(points, color, w, h, cls) {
       if (!points || points.length < 2) return '';
-      const w = 200, h = 38, pad = 3;
       const vals = points.map(p => p.value);
-      const min = Math.min(...vals), max = Math.max(...vals);
-      const range = (max - min) || 1;
-      const stepX = w / (points.length - 1);
-      const coords = points.map((p, i) => [
-        i * stepX,
-        h - pad - ((p.value - min) / range) * (h - pad * 2),
-      ]);
-      const line = coords.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1)).join(' ');
-      const area = line + ' L' + w + ',' + h + ' L0,' + h + ' Z';
-      const [lastX, lastY] = coords[coords.length - 1];
-      return '<svg class="ah-metric-chart ah-spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-        '<path d="' + area + '" fill="' + color + '" opacity="0.14"/>' +
-        '<path class="ah-spark-line" d="' + line + '" fill="none" stroke="' + color + '" stroke-width="1.6" style="--ah-c:' + color + '"/>' +
-        '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="2.6" fill="' + color + '"/>' +
-        '</svg>';
+      const max = Math.max(...vals, 0.0001);
+      const n = points.length;
+      const gap = w * 0.02;
+      const barW = (w - gap * (n - 1)) / n;
+      const bars = points.map((p, i) => {
+        const bh = Math.max(1.5, (p.value / max) * (h - 3));
+        const x = i * (barW + gap);
+        const y = h - bh;
+        const op = i === n - 1 ? '1' : '0.5';
+        return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + Math.max(0.5, barW).toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="' + color + '" opacity="' + op + '"/>';
+      }).join('');
+      return '<svg class="' + cls + ' ah-bars" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="--ah-c:' + color + '">' + bars + '</svg>';
     }
 
-    function trendHTML(points) {
+    function trendHTML(points, cls) {
       if (!points || points.length < 2) return '';
       const delta = points[points.length - 1].value - points[points.length - 2].value;
-      if (Math.abs(delta) < 0.01) return '<span class="ah-metric-trend">–</span>';
+      if (Math.abs(delta) < 0.01) return '<span class="' + cls + '">– vs last sync</span>';
       const arrow = delta > 0 ? '▲' : '▼';
-      return '<span class="ah-metric-trend">' + arrow + ' ' + Math.abs(Math.round(delta * 100) / 100) + '</span>';
+      return '<span class="' + cls + '">' + arrow + ' ' + Math.abs(Math.round(delta * 100) / 100) + ' vs last sync</span>';
+    }
+
+    function shortDate(d) {
+      try { return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+      catch (e) { return d; }
     }
 
     function metricOrder(a, b) {
@@ -625,20 +648,50 @@ main {
       return ia - ib;
     }
 
-    function renderGrid(metrics) {
-      const entries = Object.entries(metrics).sort(metricOrder);
+    function renderHero(name, m, color) {
+      const points = lastN(m.points || [], 14);
+      const range = points.length > 1
+        ? '<div class="ah-hero-range"><span>' + esc(shortDate(points[0].date)) + '</span><span>' + esc(shortDate(points[points.length - 1].date)) + '</span></div>'
+        : '';
+      document.getElementById('ahHero').innerHTML = (
+        '<div class="ah-hero" style="--ah-c:' + color + '">' +
+          '<div class="ah-hero-top">' +
+            '<div><div class="ah-hero-label">' + esc(m.label) + ' — last ' + points.length + ' days</div>' +
+            '<span class="ah-hero-val">' + esc(m.value) + '</span><span class="ah-hero-units">' + esc(m.units || '') + '</span></div>' +
+            trendHTML(m.points, 'ah-hero-trend') +
+          '</div>' +
+          barsSVG(points, color, 600, 120, 'ah-hero-chart') +
+          range +
+        '</div>'
+      );
+    }
+
+    function renderGrid(entries, colorOffset) {
       document.getElementById('ahGrid').innerHTML = entries.map(([name, m], i) => {
-        const color = AH_COLORS[i % AH_COLORS.length];
+        const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
         const days = m.points ? m.points.length : 0;
         return (
           '<div class="ah-metric" style="--ah-c:' + color + '">' +
-            '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span>' + trendHTML(m.points) + '</div>' +
-            '<div><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></div>' +
-            sparklineSVG(m.points, color) +
+            '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span></div>' +
+            '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></span>' + trendHTML(m.points, 'ah-metric-trend') + '</div>' +
+            barsSVG(lastN(m.points, 20), color, 200, 38, 'ah-metric-chart') +
             (days > 1 ? '<div class="ah-metric-days">' + days + ' days tracked</div>' : '') +
           '</div>'
         );
       }).join('');
+    }
+
+    function renderMetrics(metrics) {
+      const entries = Object.entries(metrics).sort(metricOrder);
+      if (!entries.length) return;
+      // Feature whichever priority metric actually has enough history to
+      // chart; fall back to the metric with the most days tracked.
+      let heroIdx = entries.findIndex(([, m]) => m.points && m.points.length >= 2);
+      if (heroIdx === -1) heroIdx = 0;
+      const [heroName, heroM] = entries[heroIdx];
+      renderHero(heroName, heroM, AH_COLORS[0]);
+      const rest = entries.filter((_, i) => i !== heroIdx);
+      renderGrid(rest, 1);
     }
 
     let ahSupa = null;
@@ -662,7 +715,7 @@ main {
         }
         empty.style.display = 'none'; conn.style.display = '';
         document.getElementById('ahUpdated').textContent = relTime(data.data.updatedAt);
-        renderGrid(metrics);
+        renderMetrics(metrics);
       } catch (e) { /* offline — leave last-known UI as is */ }
     }
     loadAppleHealth();
