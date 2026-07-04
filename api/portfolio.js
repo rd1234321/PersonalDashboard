@@ -12,7 +12,15 @@
 //
 // Expected JSON body:
 //   {
-//     "portfolio_value": number,
+//     "portfolio_value": number,             (market value of positions)
+//     "cash_balance": number,                (optional — uninvested cash
+//                                              sitting in the same brokerage
+//                                              account, e.g. Robinhood's
+//                                              settled/buying-power cash;
+//                                              added to portfolio_value for
+//                                              display and history, so the
+//                                              total shown matches what the
+//                                              brokerage itself reports)
 //     "day_change_pct": number,
 //     "day_change_usd": number,
 //     "open_positions": number,
@@ -101,16 +109,19 @@ export default async function handler(req, res) {
 
   const incomingPositions = sanitizePositions(body.positions);
   const portfolioValue = body.portfolio_value != null ? body.portfolio_value : existing.portfolio_value;
+  const cashBalance = body.cash_balance != null ? body.cash_balance : (typeof existing.cash_balance === 'number' ? existing.cash_balance : 0);
 
   // One point per calendar day (last sync of the day wins), capped at 60 —
   // same shape/approach as api/apple-health.js's history, so the dashboard
   // can chart a real trend line instead of faking one from a single value.
+  // Buckets the TOTAL (positions + cash) so the trend line matches the
+  // total the dashboard actually displays.
   const today = new Date().toISOString().slice(0, 10);
   const priorHistory = Array.isArray(existing.value_history) ? existing.value_history : [];
   let valueHistory = priorHistory;
   if (typeof portfolioValue === 'number') {
     const byDay = new Map(priorHistory.map(p => [p.date, p.value]));
-    byDay.set(today, portfolioValue);
+    byDay.set(today, portfolioValue + (cashBalance || 0));
     valueHistory = Array.from(byDay.entries())
       .map(([date, value]) => ({ date, value }))
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -143,6 +154,7 @@ export default async function handler(req, res) {
 
   const payload = {
     portfolio_value: portfolioValue,
+    cash_balance: cashBalance,
     day_change_pct: body.day_change_pct != null ? body.day_change_pct : existing.day_change_pct,
     day_change_usd: body.day_change_usd != null ? body.day_change_usd : existing.day_change_usd,
     open_positions: body.open_positions != null ? body.open_positions : existing.open_positions,

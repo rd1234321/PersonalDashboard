@@ -1697,41 +1697,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   </table>
 </div>
 
-<!-- ===== CASH — money that isn't invested (Portfolio above only ever
-     covers positions); kept separate rather than summed together since
-     Cash is tracked in whatever currency you pick here while Portfolio
-     is always USD, and adding them without a conversion would lie. ===== -->
-<div class="section-title">
-  <span class="section-title-text">CASH</span>
-</div>
-<div class="card" style="margin-bottom:18px">
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:12px">
-    <div>
-      <div style="font-size:11px;color:var(--text-tertiary);letter-spacing:0.04em;font-weight:500">Uninvested cash</div>
-      <div id="netWorthTotal" style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1.05;margin-top:2px">CHF 0</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <span style="font-size:11px;color:var(--text-tertiary)">Currency</span>
-      <select id="netWorthCurrency" style="background:var(--bg-card);color:var(--text-primary);border:1px solid rgba(63,217,255,0.16);border-radius:0;padding:4px 8px;font-size:12px;font-family:inherit;cursor:pointer">
-        <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="GBP">GBP</option>
-      </select>
-    </div>
-  </div>
-  <div class="label" style="display:flex;justify-content:space-between;align-items:center">
-    <span>💵 Cash accounts</span>
-    <span id="bankTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span>
-  </div>
-  <div id="bankList" class="nw-list"></div>
-  <div class="quick-add">
-    <input type="text" placeholder="Account name (e.g. Checking)" id="bankName" />
-    <input type="number" placeholder="Amount" id="bankAmount" step="0.01" />
-    <button class="quick-add-btn" id="bankAddBtn">+</button>
-  </div>
-</div>
-
 <!-- ===== ACTIVE SUBSCRIPTIONS ===== -->
 <div class="section" data-section="subs">
   <div class="section-title">
@@ -3486,10 +3451,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         change.classList.toggle('pos', isPos);
         change.classList.toggle('neg', !isPos);
       }
+      const cashBalance = typeof p.cash_balance === 'number' ? p.cash_balance : 0;
+      const totalValue = (p.portfolio_value || 0) + cashBalance;
       const valueEl = document.getElementById('portfolioTeaserValue');
-      if (valueEl) valueEl.textContent = fmtUsd(p.portfolio_value);
+      if (valueEl) valueEl.textContent = fmtUsd(totalValue);
       const posEl = document.getElementById('portfolioTeaserPositions');
-      if (posEl) posEl.textContent = (p.open_positions != null ? p.open_positions : 0) + ' positions';
+      if (posEl) {
+        posEl.textContent = (p.open_positions != null ? p.open_positions : 0) + ' positions' +
+          (cashBalance ? ' · ' + fmtUsd(cashBalance) + ' cash' : '');
+      }
       const alertsEl = document.getElementById('portfolioTeaserAlerts');
       if (alertsEl) {
         alertsEl.textContent = p.alerts_count ? p.alerts_count + ' alert' + (p.alerts_count === 1 ? '' : 's') + (p.alerts_note ? ' · ' + p.alerts_note : '') : '';
