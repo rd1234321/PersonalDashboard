@@ -246,7 +246,69 @@ body {
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 .hud-scatter .reactor { animation: hud-boot-in-reactor 0.9s cubic-bezier(.2,.8,.2,1) both; }
-.hud-scatter .hud-dial { animation: hud-boot-in 0.6s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--boot-delay, 0s); }
+.hud-scatter .hud-dial { animation: hud-boot-in 0.6s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--boot-delay, 0s); z-index: 4; }
+
+/* =====================================================================
+   Outer-area animation: a big slow scan ring with orbiting markers,
+   a dial-to-dial network mesh, ambient drifting particles, and a
+   bottom activity ticker — all decorative, all pointer-events:none,
+   all behind the clickable dials (z-index 0/1 vs dials at z-index 4).
+   ===================================================================== */
+.hud-outer-ring {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 96%; aspect-ratio: 1; border-radius: 50%;
+  border: 1px dashed rgba(63,217,255,0.10);
+  pointer-events: none; z-index: 0;
+}
+.hud-outer-ring2 {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 74%; aspect-ratio: 1; border-radius: 50%;
+  border: 1px solid rgba(240,168,60,0.07);
+  pointer-events: none; z-index: 0;
+}
+.hud-outer-orbit { position: absolute; inset: 0; pointer-events: none; }
+.hud-outer-orbit-a { animation: hud-spin 46s linear infinite; }
+.hud-outer-orbit-b { animation: hud-spin-rev 62s linear infinite; }
+.hud-outer-orbit .dot {
+  position: absolute; top: -3px; left: 50%; width: 6px; height: 6px; border-radius: 50%;
+  transform: translateX(-50%);
+}
+.hud-outer-orbit-a .dot { background: var(--hud-amber); filter: drop-shadow(0 0 6px var(--hud-amber)); }
+.hud-outer-orbit-b .dot { background: var(--hud-teal);  filter: drop-shadow(0 0 6px var(--hud-teal)); }
+
+/* Dial-to-dial network mesh, drawn from geometry like the traces */
+#meshLayer { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.hud-mesh-line {
+  position: absolute; height: 1px; transform-origin: 0 50%;
+  background-image: repeating-linear-gradient(90deg, rgba(63,217,255,0.14) 0 6px, transparent 6px 13px);
+  background-size: 26px 100%;
+  animation: hud-mesh-march 2.2s linear infinite;
+}
+@keyframes hud-mesh-march { from { background-position: 0 0; } to { background-position: -26px 0; } }
+
+/* Ambient drifting particles across the whole panel */
+.hud-particles { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: visible; }
+.hud-particle {
+  position: absolute; width: 2px; height: 2px; border-radius: 50%;
+  opacity: 0;
+  animation: hud-float var(--pdur, 9s) ease-in-out infinite;
+  animation-delay: var(--pdelay, 0s);
+}
+@keyframes hud-float {
+  0%   { opacity: 0; transform: translateY(0) scale(1); }
+  12%  { opacity: 0.8; }
+  85%  { opacity: 0.4; }
+  100% { opacity: 0; transform: translateY(-46px) scale(0.6); }
+}
+
+/* Bottom "activity" EQ ticker — purely decorative */
+.hud-eq {
+  position: absolute; left: 50%; bottom: -36px; transform: translateX(-50%);
+  display: flex; align-items: flex-end; gap: 3px; height: 20px;
+  pointer-events: none; z-index: 0; opacity: 0.65;
+}
+.hud-eq span { width: 3px; height: 4px; background: var(--hud-cyan); opacity: 0.6; animation: hud-eq-bounce 1.3s ease-in-out infinite; }
+@keyframes hud-eq-bounce { 0%, 100% { height: 3px; } 50% { height: 18px; } }
 
 /* Radar-ping ripple on dial hover */
 .hud-dial-ring-wrap::after {
@@ -500,6 +562,15 @@ body {
 
   <!-- ===== Desktop-only reactor layout (hidden under 980px, .bento above takes over) ===== -->
   <div class="hud-scatter">
+    <div class="hud-outer-ring">
+      <div class="hud-outer-orbit hud-outer-orbit-a"><span class="dot"></span></div>
+      <div class="hud-outer-orbit hud-outer-orbit-b"><span class="dot"></span></div>
+    </div>
+    <div class="hud-outer-ring2"></div>
+    <div id="meshLayer"></div>
+    <div class="hud-particles" id="hudParticles"></div>
+    <div class="hud-eq" id="hudEq"></div>
+
     <div class="hud-scanlines"></div>
     <div id="traceLayer"></div>
 
@@ -1015,6 +1086,80 @@ body {
   window.addEventListener('resize', layoutTraces);
   layoutTraces();
   setTimeout(layoutTraces, 400); // re-run once fonts/layout settle
+
+  // ---- faint network mesh linking each dial to the next, same
+  // geometry approach as the trace lines above ----
+  function layoutMesh() {
+    const scatter = document.querySelector('.hud-scatter');
+    const layer = document.getElementById('meshLayer');
+    if (!scatter || !layer) return;
+    if (getComputedStyle(scatter).display === 'none') return;
+    layer.innerHTML = '';
+    const sRect = scatter.getBoundingClientRect();
+    const dials = Array.from(document.querySelectorAll('.hud-dial'));
+    const centers = dials.map((d) => {
+      const r = d.querySelector('.hud-dial-ring-wrap').getBoundingClientRect();
+      return { x: r.left + r.width / 2 - sRect.left, y: r.top + r.height / 2 - sRect.top };
+    });
+    for (let i = 0; i < centers.length; i++) {
+      const a = centers[i], b = centers[(i + 1) % centers.length];
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+      const line = document.createElement('div');
+      line.className = 'hud-mesh-line';
+      line.style.left = a.x + 'px';
+      line.style.top = a.y + 'px';
+      line.style.width = len + 'px';
+      line.style.transform = 'rotate(' + ang + 'deg)';
+      line.style.animationDelay = (i * -0.3) + 's';
+      layer.appendChild(line);
+    }
+  }
+  window.addEventListener('load', layoutMesh);
+  window.addEventListener('resize', layoutMesh);
+  layoutMesh();
+  setTimeout(layoutMesh, 400);
+
+  // ---- ambient drifting particles, scattered across the whole panel
+  // (fixed positions/timings so the layout is stable across reloads) ----
+  function buildParticles() {
+    const host = document.getElementById('hudParticles');
+    if (!host || host.dataset.built) return;
+    const spots = [
+      [4, 12], [9, 70], [16, 40], [22, 88], [30, 20], [37, 60],
+      [44, 5], [58, 82], [63, 30], [70, 66], [78, 12], [85, 48],
+      [91, 78], [96, 25], [50, 95], [12, 55],
+    ];
+    const colors = ['#3fd9ff', '#f0a83c', '#4dd6a8'];
+    spots.forEach((pos, i) => {
+      const el = document.createElement('span');
+      el.className = 'hud-particle';
+      el.style.left = pos[0] + '%';
+      el.style.top = pos[1] + '%';
+      el.style.background = colors[i % colors.length];
+      el.style.setProperty('--pdur', (7 + (i % 5) * 1.7).toFixed(1) + 's');
+      el.style.setProperty('--pdelay', (i * -0.6).toFixed(1) + 's');
+      host.appendChild(el);
+    });
+    host.dataset.built = '1';
+  }
+  buildParticles();
+
+  // ---- bottom activity ticker bars, staggered for an organic EQ look ----
+  function buildEq() {
+    const host = document.getElementById('hudEq');
+    if (!host || host.dataset.built) return;
+    const delays = [0, 0.08, 0.21, 0.05, 0.33, 0.14, 0.27, 0.02, 0.19, 0.36, 0.11, 0.24, 0.07, 0.3];
+    const colors = ['#3fd9ff', '#f0a83c', '#4dd6a8'];
+    delays.forEach((d, i) => {
+      const bar = document.createElement('span');
+      bar.style.background = colors[i % colors.length];
+      bar.style.animationDelay = d + 's';
+      host.appendChild(bar);
+    });
+    host.dataset.built = '1';
+  }
+  buildEq();
 })();
 </script>
 </body>
