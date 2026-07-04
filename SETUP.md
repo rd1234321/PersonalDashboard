@@ -12,8 +12,9 @@ devices with **Supabase**. Apple Health is an optional add-on.
 3. Framework Preset: **Other**. Root Directory: **`./`**. Build/output: leave blank (static).
 4. **Deploy.** You'll get a URL like `https://your-app.vercel.app`.
 
-The dashboard opens to a **password screen** — the default password is in
-[`lock.js`](lock.js) (`var PASSWORD = "qwer"`). Change it to whatever you want.
+The dashboard opens to a **password screen** ([`lock.js`](lock.js)) that calls
+`/api/session-login` — the password itself lives server-side in an env var (see below), never
+in the code, so it can't be read out of the page source.
 
 ---
 
@@ -30,19 +31,22 @@ create table if not exists public.app_state (
   updated_at timestamptz not null default now()
 );
 
--- The browser uses the ANON key, so allow it to read/write:
+-- RLS is on with NO policy for anon — the anon key (public, shipped to
+-- the browser) has zero access to this table. All reads/writes go
+-- through this app's own /api/data-get and /api/data-set, which use
+-- the SERVICE ROLE key server-side and are gated by your dashboard
+-- password (see step 1). Don't add an "anon full access" policy here —
+-- that's what used to make this table readable/writable by anyone who
+-- extracted the anon key from the page source.
 alter table public.app_state enable row level security;
-create policy "anon full access app_state"
-  on public.app_state for all
-  to anon using (true) with check (true);
-
--- Instant cross-device updates:
-alter publication supabase_realtime add table public.app_state;
 ```
 
 ### SQL #2 — progress-photo sync (Storage bucket)
 Progress photos upload to a Supabase **Storage** bucket called `progress-photos` (only the
 image URLs sync through `app_state`). Skip this if you don't need photos to sync across devices.
+Photo URLs are unguessable but public-by-design (that's how Supabase Storage public buckets
+work), which is a much smaller exposure than the whole `app_state` table — so this one still
+uses the anon key directly, unlike `app_state` above.
 ```sql
 insert into storage.buckets (id, name, public)
 values ('progress-photos', 'progress-photos', true)
@@ -55,27 +59,26 @@ create policy "anon manage progress-photos"
   with check (bucket_id = 'progress-photos');
 ```
 
-### Connect YOUR Supabase — pick ONE way
-Supabase → **Project Settings → API**. Copy the **Project URL** and the **anon / publishable** key.
+### Connect YOUR Supabase
+Supabase → **Project Settings → API**. Copy the **Project URL**, the **anon / publishable**
+key, and the **service_role** key (further down the same page, behind a "reveal" click).
 
-**Way A — Vercel env vars (easiest, no code edits):**
-In Vercel → **Settings → Environment Variables**, add:
+In Vercel → **Settings → Environment Variables**, add all of these, then redeploy:
 
 | Variable | Value |
 |---|---|
 | `SUPABASE_URL` | your Project URL |
-| `SUPABASE_ANON_KEY` | your anon / publishable key |
+| `SUPABASE_ANON_KEY` | your anon / publishable key (used client-side, for Storage only) |
+| `SUPABASE_SERVICE_ROLE_KEY` | your **service_role** key — **server-only, never expose this** |
+| `SESSION_SECRET` | any long random string, e.g. `openssl rand -hex 32` |
+| `DASHBOARD_PASSWORD` | whatever password you want to log in with |
 
-Redeploy. The app reads these automatically via `/api/config`.
+The app reads `SUPABASE_URL`/`SUPABASE_ANON_KEY` automatically via `/api/config`; the other
+three are read directly by the `/api/*` serverless functions and never sent to the browser.
 
-**Way B — edit the files:**
-Replace the old URL/key in these files:
-- [`sync.js`](sync.js)
-- [`topbar.js`](topbar.js)
-- [`gym.html`](gym.html)
-
-> ⚠️ Only the **anon** key (public) is used here. **Never** put the `service_role` key in code
-> or in these env vars.
+> ⚠️ `SUPABASE_SERVICE_ROLE_KEY` bypasses row-level security entirely — treat it like a root
+> password. It must only ever live in Vercel env vars, never in a file that gets committed or
+> a variable that ships to the client.
 
 ---
 
@@ -124,8 +127,15 @@ console.anthropic.com.
 
 ## TL;DR
 1. Fork → import to Vercel → deploy.
-2. New Supabase → run the **SQL** above → paste your **URL + anon key** into `sync.js`,
-   `topbar.js`, `gym.html`.
+2. New Supabase → run the **SQL** above → add `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, and `DASHBOARD_PASSWORD` in Vercel → redeploy.
 3. (Optional) Apple Health: install Health Auto Export on your phone, add `APPLE_HEALTH_SECRET`
    in Vercel, point its REST API automation at `/api/apple-health`.
-4. Change the password in `lock.js`. Done.
+4. Open the site, log in with `DASHBOARD_PASSWORD`. Done.
+
+## Upgrading an existing deployment
+If you had this dashboard running before this version, your data isn't lost — it's still sitting
+in the same `app_state` table. You just need to: run the updated SQL #1 above (drops the old
+`anon full access` policy), add the three new env vars (`SUPABASE_SERVICE_ROLE_KEY`,
+`SESSION_SECRET`, `DASHBOARD_PASSWORD`) in Vercel, and redeploy. If `api/apple-health.js` was
+already set up, it keeps working (it was switched to the service role key too).

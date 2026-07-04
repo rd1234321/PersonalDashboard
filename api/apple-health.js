@@ -127,9 +127,11 @@ export default async function handler(req, res) {
   }
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return res.status(500).json({ error: 'SUPABASE_URL / SUPABASE_ANON_KEY not configured on the server' });
+  // Uses the SERVICE ROLE key (server-only) rather than the anon key —
+  // the anon key no longer has any RLS access to app_state at all.
+  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    return res.status(500).json({ error: 'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured on the server' });
   }
 
   let body = req.body;
@@ -146,7 +148,7 @@ export default async function handler(req, res) {
   let existingMetrics = {};
   try {
     const er = await fetch(SUPABASE_URL + '/rest/v1/app_state?key=eq.apple_health&select=data', {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + SUPABASE_SERVICE_KEY },
     });
     if (er.ok) {
       const rows = await er.json();
@@ -187,8 +189,8 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_SERVICE_KEY,
         'Prefer': 'resolution=merge-duplicates',
       },
       body: JSON.stringify({ key: 'apple_health', data: payload, updated_at: new Date().toISOString() }),

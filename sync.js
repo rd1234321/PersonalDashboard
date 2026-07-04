@@ -117,15 +117,14 @@
       const json = JSON.stringify(state);
       if (json === lastSyncedJson) return;
       try {
-        fetch(SUPABASE_URL + '/rest/v1/app_state?on_conflict=key', {
+        // Goes through the session-gated proxy, same as pushNow() — this
+        // is just the fetch-with-keepalive version for page unload,
+        // never talks to Supabase directly.
+        fetch('/api/data-set', {
           method: 'POST',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': 'Bearer ' + SUPABASE_KEY,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates',
-          },
-          body: JSON.stringify({ key: appKey, data: state, updated_at: new Date().toISOString() }),
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: appKey, data: state }),
           keepalive: true,
         }).catch(() => {});
         lastSyncedJson = json;
