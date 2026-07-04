@@ -515,6 +515,10 @@ main {
     .wh-live-dot { width:6px; height:6px; border-radius:0; background:var(--hud-teal); filter: drop-shadow(0 0 5px var(--hud-teal)); animation:wh-pulse 1.6s ease-in-out infinite; }
     @keyframes wh-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
     .ah-head-right { display:flex; align-items:center; gap:10px; }
+    .ah-range-seg { display:inline-flex; border:1px solid rgba(63,217,255,0.16); }
+    .ah-range-seg button { border:0; background:transparent; color:var(--text-tertiary); font-family:inherit; font-size:11px; font-weight:700; letter-spacing:0.06em; padding:7px 12px; cursor:pointer; transition:background 0.15s, color 0.15s; }
+    .ah-range-seg button.on { background:rgba(63,217,255,0.16); color:var(--text-primary); }
+    .ah-range-seg button:hover:not(.on) { background:rgba(63,217,255,0.06); }
     .wh-updated { font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); }
     .wh-refresh { width:32px; height:32px; border-radius:0; background:rgba(63,217,255,0.04); border:1px solid rgba(63,217,255,0.14); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.4s, background 0.18s, color 0.18s; }
     .wh-refresh:hover { background:rgba(63,217,255,0.12); color:var(--text-primary); }
@@ -575,6 +579,11 @@ main {
       <div class="ah-head">
         <div class="wh-brand"><span class="wh-brand-mark">🍎</span><span class="wh-brand-text">APPLE HEALTH</span><span class="wh-live"><span class="wh-live-dot"></span>synced</span></div>
         <div class="ah-head-right">
+          <div class="ah-range-seg" id="ahRangeSeg">
+            <button type="button" data-range="day" class="on">Day</button>
+            <button type="button" data-range="week">Week</button>
+            <button type="button" data-range="month">Month</button>
+          </div>
           <span id="ahUpdated" class="wh-updated">—</span>
           <button id="ahRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
         </div>
@@ -597,6 +606,16 @@ main {
       'respiratory_rate', 'blood_oxygen_saturation', 'flights_climbed',
       'basal_energy_burned', 'weight_body_mass', 'body_fat_percentage',
     ];
+    // Mirrors api/apple-health.js's SUM_METRICS — running-total metrics get
+    // summed when grouped into weeks/months, everything else gets averaged.
+    const AH_SUM_METRICS = new Set([
+      'step_count', 'active_energy', 'basal_energy_burned', 'flights_climbed',
+      'apple_exercise_time', 'apple_stand_time', 'apple_stand_hour',
+      'distance_walking_running', 'distance_cycling', 'distance_swimming',
+      'swimming_stroke_count', 'push_count', 'dietary_energy', 'water',
+    ]);
+    let ahRange = 'day';
+    let ahLastMetrics = null;
 
     function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
     function relTime(iso) {
@@ -640,6 +659,35 @@ main {
       catch (e) { return d; }
     }
 
+    // Monday-start week key, e.g. "2026-06-29".
+    function weekKey(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      const day = (d.getDay() + 6) % 7; // 0 = Monday
+      d.setDate(d.getDate() - day);
+      return d.toISOString().slice(0, 10);
+    }
+    function monthKey(dateStr) { return dateStr.slice(0, 7); } // "2026-06"
+
+    // Collapse daily points into week/month buckets — summed for
+    // running-total metrics, averaged for point-in-time ones. 'day' is a
+    // no-op since points already arrive as one entry per day.
+    function aggregateRange(points, mode, name) {
+      if (mode === 'day' || !points || points.length < 2) return points;
+      const keyFn = mode === 'month' ? monthKey : weekKey;
+      const sum = AH_SUM_METRICS.has(name);
+      const byBucket = new Map();
+      for (const p of points) {
+        const key = keyFn(p.date);
+        if (!byBucket.has(key)) byBucket.set(key, []);
+        byBucket.get(key).push(p.value);
+      }
+      return Array.from(byBucket.entries())
+        .map(([date, vals]) => ({ date, value: sum ? vals.reduce((a, b) => a + b, 0) : vals.reduce((a, b) => a + b, 0) / vals.length }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+    function rangeCap(mode) { return mode === 'month' ? 12 : mode === 'week' ? 12 : 14; }
+    function rangeNoun(mode) { return mode === 'month' ? 'months' : mode === 'week' ? 'weeks' : 'days'; }
+
     function metricOrder(a, b) {
       const ia = AH_PRIORITY.indexOf(a[0]), ib = AH_PRIORITY.indexOf(b[0]);
       if (ia === -1 && ib === -1) return a[0].localeCompare(b[0]);
@@ -649,16 +697,16 @@ main {
     }
 
     function renderHero(name, m, color) {
-      const points = lastN(m.points || [], 14);
+      const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
       const range = points.length > 1
         ? '<div class="ah-hero-range"><span>' + esc(shortDate(points[0].date)) + '</span><span>' + esc(shortDate(points[points.length - 1].date)) + '</span></div>'
         : '';
       document.getElementById('ahHero').innerHTML = (
         '<div class="ah-hero" style="--ah-c:' + color + '">' +
           '<div class="ah-hero-top">' +
-            '<div><div class="ah-hero-label">' + esc(m.label) + ' — last ' + points.length + ' days</div>' +
+            '<div><div class="ah-hero-label">' + esc(m.label) + ' — last ' + points.length + ' ' + rangeNoun(ahRange) + '</div>' +
             '<span class="ah-hero-val">' + esc(m.value) + '</span><span class="ah-hero-units">' + esc(m.units || '') + '</span></div>' +
-            trendHTML(m.points, 'ah-hero-trend') +
+            trendHTML(points, 'ah-hero-trend') +
           '</div>' +
           barsSVG(points, color, 600, 120, 'ah-hero-chart') +
           range +
@@ -669,12 +717,13 @@ main {
     function renderGrid(entries, colorOffset) {
       document.getElementById('ahGrid').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
+        const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange) + 8);
         const days = m.points ? m.points.length : 0;
         return (
           '<div class="ah-metric" style="--ah-c:' + color + '">' +
             '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span></div>' +
-            '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></span>' + trendHTML(m.points, 'ah-metric-trend') + '</div>' +
-            barsSVG(lastN(m.points, 20), color, 200, 38, 'ah-metric-chart') +
+            '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></span>' + trendHTML(points, 'ah-metric-trend') + '</div>' +
+            barsSVG(points, color, 200, 38, 'ah-metric-chart') +
             (days > 1 ? '<div class="ah-metric-days">' + days + ' days tracked</div>' : '') +
           '</div>'
         );
@@ -682,6 +731,7 @@ main {
     }
 
     function renderMetrics(metrics) {
+      ahLastMetrics = metrics;
       const entries = Object.entries(metrics).sort(metricOrder);
       if (!entries.length) return;
       // Feature whichever priority metric actually has enough history to
@@ -693,6 +743,13 @@ main {
       const rest = entries.filter((_, i) => i !== heroIdx);
       renderGrid(rest, 1);
     }
+
+    const ahRangeSeg = document.getElementById('ahRangeSeg');
+    if (ahRangeSeg) ahRangeSeg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      ahRange = b.dataset.range;
+      ahRangeSeg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      if (ahLastMetrics) renderMetrics(ahLastMetrics);
+    }));
 
     let ahSupa = null;
     function ahClient() {
