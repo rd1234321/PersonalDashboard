@@ -1,7 +1,7 @@
 # Dashboard — Setup Guide (fork → deploy in ~5 min)
 
 This is a static dashboard (plain HTML/JS) that deploys on **Vercel** and syncs across your
-devices with **Supabase**. WHOOP is an optional add-on.
+devices with **Supabase**. Apple Health is an optional add-on.
 
 ---
 
@@ -79,26 +79,7 @@ Replace the old URL/key in these files:
 
 ---
 
-## 3. WHOOP (optional)
-
-1. **developer.whoop.com** → create an app.
-2. Set its **Redirect URI** to exactly: `https://your-app.vercel.app/api/whoop-callback`
-   (use your real Vercel domain — add every domain you'll open the site from).
-3. Put your app's **Client ID** in [`health.html`](health.html) (`const CLIENT_ID = '...'`),
-   and add these in Vercel → **Settings → Environment Variables**, then redeploy:
-
-| Variable | Value |
-|---|---|
-| `WHOOP_CLIENT_ID` | your WHOOP app's Client ID |
-| `WHOOP_CLIENT_SECRET` | your WHOOP app's Client Secret (**secret**) |
-
-4. Open the site at that exact domain → Health page → **Connect WHOOP**.
-
-> The callback auto-detects the domain, so you do **not** need a `WHOOP_REDIRECT_URI` env var.
-
----
-
-## 4. Apple Health / Apple Watch (optional)
+## 3. Apple Health / Apple Watch (optional)
 
 Apple doesn't offer a cloud API for Health data (it lives on your phone by design), so this
 works the opposite way from WHOOP: instead of the dashboard pulling from Apple, your phone
@@ -124,9 +105,16 @@ works the opposite way from WHOOP: instead of the dashboard pulling from Apple, 
 > This reuses the same `app_state` table as everything else (row key `apple_health`), so no
 > extra Supabase setup is needed beyond the SQL in step 2 above.
 
+> ⚠️ **If the automation gets a `401 Protected deployment` error:** your Vercel project has
+> **Deployment Protection** (Vercel Authentication) turned on, which blocks the phone's request
+> before it reaches this code — this is separate from the `lock.js` password screen. Go to
+> **Settings → Deployment Protection** and set it to **Disabled** (the `lock.js` screen already
+> gates the actual pages, so this second layer is usually redundant and just breaks webhooks
+> like this one). Redeploy isn't required for this setting.
+
 ---
 
-## 5. Nova (AI mentor / gym coach) — optional
+## 4. Nova (AI mentor / gym coach) — optional
 
 No setup or key in the repo. Each user **pastes their own Anthropic API key** on the
 **Nova** tile; it's stored only in their browser and sent straight to Anthropic. Get a key at
@@ -138,5 +126,6 @@ console.anthropic.com.
 1. Fork → import to Vercel → deploy.
 2. New Supabase → run the **SQL** above → paste your **URL + anon key** into `sync.js`,
    `topbar.js`, `gym.html`.
-3. (Optional) WHOOP: Client ID in `health.html` + the two env vars in Vercel.
+3. (Optional) Apple Health: install Health Auto Export on your phone, add `APPLE_HEALTH_SECRET`
+   in Vercel, point its REST API automation at `/api/apple-health`.
 4. Change the password in `lock.js`. Done.

@@ -3,12 +3,14 @@
 //
 // Receives a "REST API" automation payload from the Health Auto
 // Export iOS app, normalizes whatever metrics it contains into
-// { name: { label, value, units, date } }, and upserts it into the
-// same Supabase app_state table the rest of the dashboard already
-// uses (row key = 'apple_health'). health.html reads that row the
-// same way it reads everything else — no polling of Apple's own
-// servers, because there isn't one: Health data never leaves your
-// phone until Health Auto Export pushes it here.
+// { name: { label, units, value, date, points: [{date,value}, ...] } }
+// — merging new points into whatever history is already stored so
+// the dashboard can chart trends, not just show the latest value —
+// and upserts it into the same Supabase app_state table the rest of
+// the dashboard already uses (row key = 'apple_health'). health.html
+// reads that row the same way it reads everything else — no polling
+// of Apple's own servers, because there isn't one: Health data never
+// leaves your phone until Health Auto Export pushes it here.
 //
 // Set up on your iPhone:
 //   1. Install "Health Auto Export - JSON+CSV" from the App Store.
@@ -59,6 +61,19 @@ function friendlyLabel(name) {
   return FRIENDLY[name] || String(name).replace(/_/g, ' ');
 }
 
+// Merge newly-received points into whatever history is already
+// stored for this metric, de-duped by date, capped to the most
+// recent 60 so the row doesn't grow without bound.
+function mergeHistory(existingPoints, incomingPoints) {
+  const byDate = new Map();
+  (existingPoints || []).forEach(p => { if (p && p.date) byDate.set(p.date, p.value); });
+  incomingPoints.forEach(p => byDate.set(p.date, p.value));
+  return Array.from(byDate.entries())
+    .map(([date, value]) => ({ date, value }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(-60);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -87,18 +102,41 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'no metrics found in payload (expected body.data.metrics[])' });
   }
 
+  // Pull whatever's already stored so we can merge history in,
+  // rather than clobbering yesterday's points with today's payload.
+  let existingMetrics = {};
+  try {
+    const er = await fetch(SUPABASE_URL + '/rest/v1/app_state?key=eq.apple_health&select=data', {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+    });
+    if (er.ok) {
+      const rows = await er.json();
+      if (rows && rows[0] && rows[0].data && rows[0].data.metrics) existingMetrics = rows[0].data.metrics;
+    }
+  } catch (e) { /* fall back to empty history if the read fails */ }
+
   const summary = {};
   for (const m of metrics) {
     if (!m || !m.name || !Array.isArray(m.data) || !m.data.length) continue;
-    const latest = m.data[m.data.length - 1];
-    const value = pickValue(latest);
-    if (value == null) continue;
+    const incomingPoints = m.data
+      .map(p => ({ date: p && p.date, value: pickValue(p) }))
+      .filter(p => p.date && p.value != null);
+    if (!incomingPoints.length) continue;
+    const prior = existingMetrics[m.name];
+    const points = mergeHistory(prior && prior.points, incomingPoints);
+    const latest = points[points.length - 1];
     summary[m.name] = {
       label: friendlyLabel(m.name),
-      value: Math.round(value * 100) / 100,
-      units: m.units || '',
-      date: latest.date || null,
+      units: m.units || (prior && prior.units) || '',
+      value: Math.round(latest.value * 100) / 100,
+      date: latest.date,
+      points,
     };
+  }
+  // Keep metrics that already had data but weren't in this particular
+  // payload (e.g. you only enabled a subset of metrics for this sync).
+  for (const name of Object.keys(existingMetrics)) {
+    if (!summary[name]) summary[name] = existingMetrics[name];
   }
 
   const payload = { updatedAt: new Date().toISOString(), metrics: summary };
