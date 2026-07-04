@@ -495,9 +495,11 @@ html, body {
 .nutri-macro-fill.protein { background: var(--good); }
 .nutri-macro-fill.carbs   { background: var(--info); }
 .nutri-macro-fill.fat     { background: var(--warn); }
+.nutri-macro-fill.sugar   { background: #e0605c; }
+.nutri-macro-fill.sodium  { background: #a78bfa; }
 
 .nutri-add-row {
-  display: grid; grid-template-columns: 1fr 74px 64px 64px 64px auto;
+  display: grid; grid-template-columns: 1fr 64px 56px 56px 56px 64px 76px auto;
   gap: 6px; align-items: center; margin-top: 4px;
 }
 .nutri-add-row[hidden] { display: none; }
@@ -545,6 +547,7 @@ html, body {
 }
 
 @media (max-width: 560px) {
+  .nutri-macros { grid-template-columns: repeat(2, 1fr); }
   .nutri-add-row { grid-template-columns: 1fr 1fr; }
   .nutri-add-row .nutri-add-btn { grid-column: 1 / -1; }
 }
@@ -593,6 +596,14 @@ html, body {
         <div class="nutri-macro-label"><span>Fat</span><span id="nutriFatText">0 / 0g</span></div>
         <div class="nutri-macro-track"><div class="nutri-macro-fill fat" id="nutriFatFill" style="width:0%"></div></div>
       </div>
+      <div class="nutri-macro">
+        <div class="nutri-macro-label"><span>Sugar</span><span id="nutriSugarText">0 / 0g</span></div>
+        <div class="nutri-macro-track"><div class="nutri-macro-fill sugar" id="nutriSugarFill" style="width:0%"></div></div>
+      </div>
+      <div class="nutri-macro">
+        <div class="nutri-macro-label"><span>Sodium</span><span id="nutriSodiumText">0 / 0mg</span></div>
+        <div class="nutri-macro-track"><div class="nutri-macro-fill sodium" id="nutriSodiumFill" style="width:0%"></div></div>
+      </div>
     </div>
 
     <div class="nutri-add-row" id="nutriAddRow">
@@ -601,6 +612,8 @@ html, body {
       <input class="nutri-input" id="nutriAddProtein" type="number" min="0" placeholder="P g" />
       <input class="nutri-input" id="nutriAddCarbs" type="number" min="0" placeholder="C g" />
       <input class="nutri-input" id="nutriAddFat" type="number" min="0" placeholder="F g" />
+      <input class="nutri-input" id="nutriAddSugar" type="number" min="0" placeholder="Sugar g" />
+      <input class="nutri-input" id="nutriAddSodium" type="number" min="0" placeholder="Sodium mg" />
       <button class="nutri-add-btn" id="nutriAddBtn" type="button">+ Add</button>
     </div>
     <div class="nutri-synced-note" id="nutriSyncedNote" hidden>Logged via MyNetDiary → Apple Health. Manual entry is hidden while synced data exists for today.</div>
@@ -762,6 +775,16 @@ html, body {
         <div class="field">
           <label>Fat (g)</label>
           <input type="number" id="setNutriFat" min="0" max="400" step="5">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Sugar (g)</label>
+          <input type="number" id="setNutriSugar" min="0" max="300" step="5">
+        </div>
+        <div class="field">
+          <label>Sodium (mg)</label>
+          <input type="number" id="setNutriSodium" min="0" max="10000" step="50">
         </div>
       </div>
     </div>
@@ -1287,7 +1310,7 @@ html, body {
     let s = null;
     try { s = JSON.parse(localStorage.getItem(NUTRI_KEY)); } catch (e) {}
     s = s || {};
-    s.goals = Object.assign({ calories: 2000, protein: 150, carbs: 220, fat: 65 }, s.goals || {});
+    s.goals = Object.assign({ calories: 2000, protein: 150, carbs: 220, fat: 65, sugar: 50, sodium: 2300 }, s.goals || {});
     s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};
     return s;
   }
@@ -1312,8 +1335,9 @@ html, body {
     const entries = todayEntries();
     const totals = synced || entries.reduce((acc, e) => {
       acc.cal += e.cal || 0; acc.protein += e.protein || 0; acc.carbs += e.carbs || 0; acc.fat += e.fat || 0;
+      acc.sugar += e.sugar || 0; acc.sodium += e.sodium || 0;
       return acc;
-    }, { cal: 0, protein: 0, carbs: 0, fat: 0 });
+    }, { cal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, sodium: 0 });
     const g = nState.goals;
 
     $('nutriSyncBadge').hidden = !synced;
@@ -1326,14 +1350,16 @@ html, body {
     $('nutriCalBarFill').style.width = calPct + '%';
     $('nutriCalBarFill').classList.toggle('over', totals.cal > g.calories);
 
-    function macro(key, id) {
+    function macro(key, id, unit) {
       const pct = g[key] ? Math.min(100, (totals[key] / g[key]) * 100) : 0;
       $('nutri' + id + 'Fill').style.width = pct + '%';
-      $('nutri' + id + 'Text').textContent = Math.round(totals[key]) + ' / ' + g[key] + 'g';
+      $('nutri' + id + 'Text').textContent = Math.round(totals[key]) + ' / ' + g[key] + (unit || 'g');
     }
     macro('protein', 'Protein');
     macro('carbs', 'Carbs');
     macro('fat', 'Fat');
+    macro('sugar', 'Sugar');
+    macro('sodium', 'Sodium', 'mg');
 
     const listEl = $('nutriLogList');
     if (synced) {
@@ -1344,7 +1370,7 @@ html, body {
       listEl.innerHTML = entries.map(e => (
         '<div class="nutri-log-item">' +
           '<span class="nutri-log-name">' + escape(e.name) + '</span>' +
-          '<span class="nutri-log-macros">' + Math.round(e.cal || 0) + ' kcal · P' + Math.round(e.protein || 0) + ' C' + Math.round(e.carbs || 0) + ' F' + Math.round(e.fat || 0) + '</span>' +
+          '<span class="nutri-log-macros">' + Math.round(e.cal || 0) + ' kcal · P' + Math.round(e.protein || 0) + ' C' + Math.round(e.carbs || 0) + ' F' + Math.round(e.fat || 0) + ' · Sugar' + Math.round(e.sugar || 0) + ' Na' + Math.round(e.sodium || 0) + '</span>' +
           '<button class="nutri-log-del" data-id="' + e.id + '" aria-label="Delete">×</button>' +
         '</div>'
       )).join('');
@@ -1361,12 +1387,14 @@ html, body {
       protein: parseFloat($('nutriAddProtein').value) || 0,
       carbs: parseFloat($('nutriAddCarbs').value) || 0,
       fat: parseFloat($('nutriAddFat').value) || 0,
+      sugar: parseFloat($('nutriAddSugar').value) || 0,
+      sodium: parseFloat($('nutriAddSodium').value) || 0,
     };
     const key = todayKey();
     nState.logs[key] = nState.logs[key] || [];
     nState.logs[key].push(entry);
     saveNutri();
-    ['nutriAddName', 'nutriAddCal', 'nutriAddProtein', 'nutriAddCarbs', 'nutriAddFat'].forEach(id => { $(id).value = ''; });
+    ['nutriAddName', 'nutriAddCal', 'nutriAddProtein', 'nutriAddCarbs', 'nutriAddFat', 'nutriAddSugar', 'nutriAddSodium'].forEach(id => { $(id).value = ''; });
     renderNutrition();
   });
 
@@ -1384,9 +1412,11 @@ html, body {
     $('setNutriProtein').value = nState.goals.protein;
     $('setNutriCarbs').value = nState.goals.carbs;
     $('setNutriFat').value = nState.goals.fat;
+    $('setNutriSugar').value = nState.goals.sugar;
+    $('setNutriSodium').value = nState.goals.sodium;
   }
   $('settingsBtn').addEventListener('click', renderNutriSettings);
-  [['setNutriCal', 'calories'], ['setNutriProtein', 'protein'], ['setNutriCarbs', 'carbs'], ['setNutriFat', 'fat']].forEach(([id, key]) => {
+  [['setNutriCal', 'calories'], ['setNutriProtein', 'protein'], ['setNutriCarbs', 'carbs'], ['setNutriFat', 'fat'], ['setNutriSugar', 'sugar'], ['setNutriSodium', 'sodium']].forEach(([id, key]) => {
     $(id).addEventListener('input', () => {
       nState.goals[key] = parseFloat($(id).value) || 0;
       saveNutri();
@@ -1489,12 +1519,16 @@ document.addEventListener('DOMContentLoaded', function () {
       const protein = metrics.protein;
       const carbs = metrics.carbohydrates;
       const fat = metrics.total_fat;
+      const sugar = metrics.dietary_sugar;
+      const sodium = metrics.dietary_sodium;
       if (cal && cal.date === today) {
         window.__ahSyncedNutrition = {
           cal: cal.value || 0,
           protein: (protein && protein.date === today) ? protein.value : 0,
           carbs: (carbs && carbs.date === today) ? carbs.value : 0,
           fat: (fat && fat.date === today) ? fat.value : 0,
+          sugar: (sugar && sugar.date === today) ? sugar.value : 0,
+          sodium: (sodium && sodium.date === today) ? sodium.value : 0,
         };
         const badge = document.getElementById('nutriSyncWhen');
         if (badge) badge.textContent = relTime(updatedAt);
