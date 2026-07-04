@@ -1697,50 +1697,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   </table>
 </div>
 
-<!-- ===== ACTIVE SUBSCRIPTIONS ===== -->
-<div class="section" data-section="subs">
-  <div class="section-title">
-    <span class="section-title-text">ACTIVE SUBSCRIPTIONS</span>
-  </div>
-  <div class="card" style="--card-accent:#f0a83c;background:rgba(240,168,60,0.05);border:1px solid rgba(240,168,60,0.20)">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:12px">
-      <div>
-        <div style="font-size:11px;color:var(--text-tertiary);letter-spacing:0.04em;font-weight:500">Monthly burn</div>
-        <div id="subsTotal" style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1.1;margin-top:2px">CHF 0 <span style="font-size:13px;color:var(--text-tertiary);font-weight:500">/ mo</span></div>
-        <div id="subsYearly" style="font-size:11px;color:var(--text-tertiary);margin-top:2px"></div>
-      </div>
-      <div id="subsCount" style="font-size:11px;color:var(--text-tertiary)"></div>
-    </div>
-    <div id="subsList"></div>
-    <div class="empty-state" id="subsEmpty">No subscriptions yet</div>
-    <div class="quick-add" style="flex-wrap:wrap;gap:6px">
-      <input type="text" placeholder="Service (e.g. Netflix)" id="subName" style="flex:1.5;min-width:120px" />
-      <input type="number" placeholder="Amount" id="subAmount" step="0.01" style="flex:1;max-width:100px" />
-      <select id="subCurrency" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);max-width:90px">
-        <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="GBP">GBP</option>
-      </select>
-      <select id="subPeriod" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);max-width:100px">
-        <option value="monthly">Monthly</option>
-        <option value="yearly">Yearly</option>
-        <option value="weekly">Weekly</option>
-      </select>
-      <label class="date-field" title="Next renewal date" style="min-width:150px"><span class="date-emoji" aria-hidden="true">📅</span><input type="date" id="subRenewal" /></label>
-      <select id="subFromCat" title="Which net worth account to deduct from" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);min-width:130px">
-        <option value="">No accounts yet</option>
-      </select>
-      <label class="sub-auto-toggle" title="Auto-deduct from the linked account on each renewal">
-        <input type="checkbox" id="subAutoDeduct" />
-        <span class="sub-auto-track"><span class="sub-auto-thumb"></span></span>
-        <span class="sub-auto-label">Auto-deduct</span>
-      </label>
-      <button class="quick-add-btn" id="subAddBtn" onclick="window.__addSub && window.__addSub()">+ Add</button>
-    </div>
-  </div>
-</div>
-
 <!-- ===== INCOMING ORDERS ===== -->
 <div class="section" data-section="incoming">
   <div class="section-title">
@@ -1850,11 +1806,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <!-- ===== BOTTOM TAB BAR ===== -->
 <nav class="bottom-tabs" id="bottomTabs" aria-label="Sections">
-  <button class="bot-tab active" data-tab="subs">
-    <span class="bot-tab-icon">🔁</span>
-    <span class="bot-tab-label">Subs</span>
-  </button>
-  <button class="bot-tab" data-tab="incoming">
+  <button class="bot-tab active" data-tab="incoming">
     <span class="bot-tab-icon">📦</span>
     <span class="bot-tab-label">Orders</span>
   </button>
@@ -1911,7 +1863,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
   tabs.forEach(b => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
   const savedTab = storeGet(TAB_KEY);
-  setActiveTab(savedTab && ['subs','incoming','wish'].includes(savedTab) ? savedTab : 'subs');
+  setActiveTab(savedTab && ['incoming','wish'].includes(savedTab) ? savedTab : 'incoming');
 
   // ============================================================
   // NET WORTH (copied from the main dashboard, verbatim logic)
