@@ -147,6 +147,23 @@ snapshot to the dashboard whenever it runs.
 3. Once a snapshot lands, a "portfolio ±X% today" segment appears in Finance's ticker and a
    teaser tile + trend chart fill in — both stay hidden until the first snapshot arrives, and
    hide again gracefully if a later read ever fails.
+4. (Optional) **Live prices** — if you add each position's `qty`/`entry_price` to the payload's
+   `positions` array (see below), Finance can show a live current price for each one instead of
+   whatever was last synced:
+
+   | Variable | Value |
+   |---|---|
+   | `FINNHUB_API_KEY` | free key from [finnhub.io](https://finnhub.io) — **server-only, never expose this** |
+
+   With this set, `/api/data-get` (the same session-gated route that reads every other row) looks
+   up a live quote per symbol from Finnhub *only when the requested key is `portfolio_summary`* —
+   the Finnhub key never reaches the browser. Live quotes are cached in memory for 60 seconds to
+   avoid burning through Finnhub's free-tier rate limit on repeated page loads. If a symbol's
+   lookup fails (rate-limited, delisted, Finnhub down, key not set at all, ...) that position
+   just falls back to its last-stored `current_price`/`pnl_pct` — nothing else on the page breaks.
+   Each position gets a `price_source: "live"` or `"cached"` field so the UI can show which one
+   it's looking at; the portfolio-wide value and day change are also recomputed from live prices
+   when every position has enough data (`qty` + a resolved price) to make that math real.
 
 > This reuses the same `app_state` table as everything else (row key `portfolio_summary`), so no
 > extra Supabase setup is needed beyond the SQL in step 2 above.
@@ -168,6 +185,7 @@ console.anthropic.com.
 3. (Optional) Apple Health: install Health Auto Export on your phone, add `APPLE_HEALTH_SECRET`
    in Vercel, point its REST API automation at `/api/apple-health`.
 4. (Optional) Portfolio: add `PORTFOLIO_SECRET` in Vercel, POST snapshots to `/api/portfolio`.
+   Add `FINNHUB_API_KEY` too if you want live per-position prices.
 5. Open the site, log in with `DASHBOARD_PASSWORD`. Done.
 
 ## Upgrading an existing deployment

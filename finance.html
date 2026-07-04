@@ -1247,6 +1247,18 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .pf-detail-stat-val { font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 @keyframes hud-reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ----- live vs. cached price indicator ----- */
+.pf-price-src {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em;
+  vertical-align: middle; text-transform: uppercase;
+}
+.pf-price-src-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.pf-price-src.is-live { color: #4dd6a8; }
+.pf-price-src.is-live .pf-price-src-dot { background: #4dd6a8; animation: pf-pulse 2.2s ease-in-out infinite; }
+.pf-price-src.is-cached { color: var(--text-tertiary); }
+.pf-price-src.is-cached .pf-price-src-dot { background: var(--text-tertiary); }
+
 /* ============================================================
    DEDUCT-FROM-NW BUTTON & CHOOSER (in order cards)
    ============================================================ */
@@ -3339,12 +3351,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const pnlClass = pnl == null ? '' : (pnl >= 0 ? 'pnl-pos' : 'pnl-neg');
       const pnlText = pnl == null ? '—' : (pnl > 0 ? '+' : '') + (Math.round(pnl * 100) / 100) + '%';
       const color = (pnl == null || pnl >= 0) ? '#4dd6a8' : '#e0605c';
+      const isLive = pos.price_source === 'live';
+      const priceSourceDot = (
+        '<span class="pf-price-src ' + (isLive ? 'is-live' : 'is-cached') + '" ' +
+          'title="' + (isLive ? 'Live price from Finnhub' : 'Stored price — live lookup unavailable') + '">' +
+          '<span class="pf-price-src-dot"></span>' + (isLive ? 'live' : 'cached') +
+        '</span>'
+      );
       const row = (
         '<tr class="pf-pos-row" data-symbol="' + escapeHtmlPf(pos.symbol) + '">' +
           '<td>' + escapeHtmlPf(pos.symbol) + '<span class="pf-expand-hint">chart ›</span></td>' +
           '<td>' + fmtNum(pos.qty) + '</td>' +
           '<td>' + fmtNum(pos.entry_price) + '</td>' +
-          '<td>' + fmtNum(pos.current_price) + '</td>' +
+          '<td>' + fmtNum(pos.current_price) + ' ' + priceSourceDot + '</td>' +
           '<td class="' + pnlClass + '">' + pnlText + '</td>' +
           '<td class="pf-range-cell">' + rangeBarHTML(pos.entry_price, pos.current_price) + '</td>' +
         '</tr>'
