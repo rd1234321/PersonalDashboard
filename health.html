@@ -525,24 +525,6 @@ main {
     .wh-refresh:hover { background:rgba(63,217,255,0.12); color:var(--text-primary); }
     .wh-refresh.spin { transform:rotate(360deg); }
 
-    /* Featured metric — one big bar chart up top */
-    .ah-hero {
-      position: relative;
-      background: rgba(63,217,255,0.045);
-      border: none; margin-bottom: 12px; padding: 18px 20px 16px;
-      overflow: hidden;
-    }
-    .ah-hero::before, .ah-hero::after { content:''; position:absolute; width:18px; height:18px; pointer-events:none; }
-    .ah-hero::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); }
-    .ah-hero::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); }
-    .ah-hero-top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
-    .ah-hero-label { font-size:11px; font-weight:700; letter-spacing:0.18em; color:var(--text-tertiary); }
-    .ah-hero-val { font-size:46px; font-weight:700; line-height:1; color:var(--text-primary); font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
-    .ah-hero-units { font-size:14px; color:var(--text-tertiary); margin-left:6px; font-weight:600; }
-    .ah-hero-trend { font-size:12px; font-family:var(--font-mono); color:var(--text-tertiary); padding-bottom:8px; }
-    .ah-hero-chart { width:100%; height:120px; display:block; }
-    .ah-hero-range { display:flex; justify-content:space-between; margin-top:6px; font-size:9.5px; color:var(--text-tertiary); letter-spacing:0.06em; }
-
     /* ----- top row: ring-gauge vitals ----- */
     .ah-vitals {
       display: grid;
@@ -569,24 +551,6 @@ main {
     .ah-vital:hover .ah-expand-hint, .ah-metric:hover .ah-expand-hint { color:#3fd9ff; }
     .ah-vital-ring-row { display:flex; align-items:center; gap:14px; }
     .ah-vital-trend { font-size:11px; font-family:var(--font-mono); color:var(--text-tertiary); line-height:1.4; }
-
-    /* ----- full-width trend chart card (reused for detail panels too) ----- */
-    .ah-trend-card {
-      position: relative;
-      background: rgba(63,217,255,0.045);
-      border: none; margin-bottom: 12px; padding: 18px 20px 16px;
-      overflow: hidden;
-    }
-    .ah-trend-card::before, .ah-trend-card::after { content:''; position:absolute; width:18px; height:18px; pointer-events:none; }
-    .ah-trend-card::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); }
-    .ah-trend-card::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); }
-    .ah-hero-top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
-    .ah-hero-label { font-size:11px; font-weight:700; letter-spacing:0.18em; color:var(--text-tertiary); }
-    .ah-hero-val { font-size:46px; font-weight:700; line-height:1; color:var(--text-primary); font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
-    .ah-hero-units { font-size:14px; color:var(--text-tertiary); margin-left:6px; font-weight:600; }
-    .ah-hero-trend { font-size:12px; font-family:var(--font-mono); color:var(--text-tertiary); padding-bottom:8px; }
-    .ah-hero-chart { width:100%; height:120px; display:block; }
-    .ah-hero-range { display:flex; justify-content:space-between; margin-top:6px; font-size:9.5px; color:var(--text-tertiary); letter-spacing:0.06em; }
 
     .ah-grid {
       display: grid;
@@ -646,7 +610,7 @@ main {
     @media (max-width:480px) {
       .ah-grid { grid-template-columns: repeat(2, 1fr); }
       .ah-vitals { grid-template-columns: repeat(2, 1fr); }
-      .ah-hero-val { font-size:36px; }
+      .ah-detail-val { font-size:24px; }
       .ah-detail-stats { grid-template-columns: repeat(3, 1fr); gap:6px; }
     }
   </style>
@@ -671,7 +635,6 @@ main {
         </div>
       </div>
       <div id="ahVitals" class="ah-vitals"></div>
-      <div id="ahHero"></div>
       <div id="ahGrid" class="ah-grid"></div>
     </div>
   </div>
@@ -854,24 +817,6 @@ main {
       }).join('');
     }
 
-    function renderHero(name, m, color) {
-      const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
-      const range = points.length > 1
-        ? '<div class="ah-hero-range"><span>' + esc(shortDate(points[0].date)) + '</span><span>' + esc(shortDate(points[points.length - 1].date)) + '</span></div>'
-        : '';
-      document.getElementById('ahHero').innerHTML = (
-        '<div class="ah-trend-card" style="--ah-c:' + color + '">' +
-          '<div class="ah-hero-top">' +
-            '<div><div class="ah-hero-label">' + esc(m.label) + ' trend — last ' + points.length + ' ' + rangeNoun(ahRange) + '</div>' +
-            '<span class="ah-hero-val">' + esc(m.value) + '</span><span class="ah-hero-units">' + esc(m.units || '') + '</span></div>' +
-            trendHTML(points, 'ah-hero-trend') +
-          '</div>' +
-          barsSVG(points, color, 600, 120, 'ah-hero-chart') +
-          range +
-        '</div>'
-      );
-    }
-
     function renderGrid(entries, colorOffset) {
       document.getElementById('ahGrid').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
@@ -939,13 +884,7 @@ main {
       if (ahOpenDetail && !metrics[ahOpenDetail]) ahOpenDetail = null;
       const vitals = entries.slice(0, AH_VITAL_COUNT);
       renderVitals(vitals);
-      // Feature whichever priority metric actually has enough history to
-      // chart; fall back to the metric with the most days tracked.
-      let heroIdx = entries.findIndex(([, m]) => m.points && m.points.length >= 2);
-      if (heroIdx === -1) heroIdx = 0;
-      const [heroName, heroM] = entries[heroIdx];
-      renderHero(heroName, heroM, AH_COLORS[heroIdx % AH_COLORS.length]);
-      const rest = entries.filter((_, i) => i >= AH_VITAL_COUNT);
+      const rest = entries.slice(AH_VITAL_COUNT);
       renderGrid(rest, AH_VITAL_COUNT);
     }
 
