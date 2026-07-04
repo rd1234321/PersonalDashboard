@@ -140,17 +140,48 @@ body {
   width: 34%; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
   pointer-events: none;
+  z-index: 2;
 }
-.reactor-rings { width: 100%; height: 100%; overflow: visible; }
+.reactor-halo {
+  position: absolute; inset: -22%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(63,217,255,0.14) 0%, rgba(63,217,255,0.05) 45%, rgba(63,217,255,0) 72%);
+  filter: blur(4px);
+  animation: hud-pulse 4s ease-in-out infinite;
+}
+.reactor-sweep {
+  position: absolute; inset: 4%; border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(63,217,255,0.20), rgba(63,217,255,0) 22%, rgba(63,217,255,0) 100%);
+  animation: hud-spin 5s linear infinite;
+  mix-blend-mode: screen;
+}
+.reactor-rings { position: relative; width: 100%; height: 100%; overflow: visible; }
 .reactor-rings circle { fill: none; }
 .r-track { stroke: rgba(63,217,255,0.10); stroke-width: 1; }
+.r-tick { stroke: rgba(63,217,255,0.22); stroke-width: 1; }
+.r-tick-major { stroke: rgba(63,217,255,0.5); stroke-width: 1.5; }
 .r-arc {
   stroke-width: 1.5; stroke-linecap: butt;
   transform-origin: 200px 200px;
 }
 .r-arc-cyan  { stroke: var(--hud-cyan);  filter: drop-shadow(0 0 5px rgba(63,217,255,0.8)); animation: hud-spin 18s linear infinite; }
 .r-arc-amber { stroke: var(--hud-amber); filter: drop-shadow(0 0 5px rgba(240,168,60,0.8)); animation: hud-spin-rev 26s linear infinite; }
+.r-arc-teal  { stroke: var(--hud-teal);  filter: drop-shadow(0 0 5px rgba(77,214,168,0.8)); animation: hud-spin 34s linear infinite; }
 .r-core-ring { stroke: var(--hud-teal); stroke-width: 1; filter: drop-shadow(0 0 6px rgba(77,214,168,0.7)); }
+.r-inner-dash { stroke: rgba(63,217,255,0.35); stroke-width: 1; stroke-dasharray: 2 6; animation: hud-spin-rev 40s linear infinite; }
+
+/* Small "satellite" nodes orbiting the reactor at different radii/speeds */
+.reactor-orbit { position: absolute; inset: 0; pointer-events: none; }
+.reactor-orbit-a { animation: hud-spin 9s linear infinite; }
+.reactor-orbit-b { inset: 12.5%; animation: hud-spin-rev 14s linear infinite; }
+.reactor-orbit-c { inset: 24%; animation: hud-spin 21s linear infinite; }
+.reactor-orbit .dot {
+  position: absolute; top: -2px; left: 50%; width: 5px; height: 5px; border-radius: 50%;
+  transform: translateX(-50%);
+}
+.reactor-orbit-a .dot { background: var(--hud-cyan);  filter: drop-shadow(0 0 5px var(--hud-cyan)); }
+.reactor-orbit-b .dot { background: var(--hud-amber); filter: drop-shadow(0 0 5px var(--hud-amber)); }
+.reactor-orbit-c .dot { background: var(--hud-teal);  filter: drop-shadow(0 0 5px var(--hud-teal)); }
+
 .reactor-core {
   position: absolute; text-align: center; color: var(--text-primary);
 }
@@ -161,6 +192,72 @@ body {
 }
 .reactor-date { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.12em; margin-top: 2px; }
 .reactor-label { font-size: 9px; color: var(--text-tertiary); letter-spacing: 0.2em; margin-top: 8px; }
+
+/* Connecting trace lines from the reactor core out to each nav dial,
+   with a small pulse traveling along each one. Positions/lengths are
+   computed in JS from actual element geometry (pure presentation). */
+#traceLayer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.hud-trace {
+  position: absolute; height: 1px;
+  background: linear-gradient(90deg, rgba(63,217,255,0.4), rgba(63,217,255,0.03));
+  transform-origin: 0 50%;
+}
+.hud-trace-pulse {
+  position: absolute; top: -2px; left: 0; width: 4px; height: 4px; border-radius: 50%;
+  background: var(--hud-cyan); filter: drop-shadow(0 0 4px var(--hud-cyan));
+  animation: hud-trace-travel 3.4s linear infinite;
+}
+@keyframes hud-trace-travel {
+  0%   { left: 0%;   opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+/* Faint drifting scanline texture over the whole reactor area */
+.hud-scanlines {
+  position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background: repeating-linear-gradient(to bottom, rgba(63,217,255,0.05) 0px, rgba(63,217,255,0.05) 1px, transparent 1px, transparent 3px);
+  background-size: 100% 3px;
+  animation: hud-scan-drift 9s linear infinite;
+  opacity: 0.5;
+}
+@keyframes hud-scan-drift { from { background-position: 0 0; } to { background-position: 0 120px; } }
+
+/* Corner telemetry readouts framing the whole scatter area */
+.hud-corner {
+  position: absolute; z-index: 3;
+  font-size: 10px; letter-spacing: 0.1em; color: var(--text-tertiary);
+  line-height: 1.6; pointer-events: none;
+}
+.hud-corner-text b { color: var(--hud-cyan); font-weight: 700; }
+.hud-corner.tl { top: -6px; left: -6px; padding: 10px 0 0 10px; border-top: 1px solid rgba(63,217,255,0.4); border-left: 1px solid rgba(63,217,255,0.4); }
+.hud-corner.tr { top: -6px; right: -6px; padding: 10px 10px 0 0; border-top: 1px solid rgba(63,217,255,0.4); border-right: 1px solid rgba(63,217,255,0.4); text-align: right; }
+.hud-corner.bl { bottom: -6px; left: -6px; padding: 0 0 10px 10px; border-bottom: 1px solid rgba(63,217,255,0.4); border-left: 1px solid rgba(63,217,255,0.4); }
+.hud-corner.br { bottom: -6px; right: -6px; padding: 0 10px 10px 0; border-bottom: 1px solid rgba(63,217,255,0.4); border-right: 1px solid rgba(63,217,255,0.4); text-align: right; }
+
+/* Boot-up reveal: rings/dials draw themselves in on load */
+@keyframes hud-boot-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes hud-boot-in-reactor {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.hud-scatter .reactor { animation: hud-boot-in-reactor 0.9s cubic-bezier(.2,.8,.2,1) both; }
+.hud-scatter .hud-dial { animation: hud-boot-in 0.6s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--boot-delay, 0s); }
+
+/* Radar-ping ripple on dial hover */
+.hud-dial-ring-wrap::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  border: 1px solid var(--accent); opacity: 0; pointer-events: none;
+}
+.hud-dial:hover .hud-dial-ring-wrap::after { animation: hud-ping 0.9s ease-out; }
+@keyframes hud-ping {
+  from { transform: scale(1);   opacity: 0.8; }
+  to   { transform: scale(1.6); opacity: 0; }
+}
 
 .hud-dial {
   --accent: #3fd9ff;
@@ -290,7 +387,7 @@ body {
 <div class="page">
 
   <div class="hub-head">
-    <h1 class="dash-title">Rowans Dashboard</h1>
+    <h1 class="dash-title">Riley's Dashboard</h1>
     <button class="gear-btn" id="settingsOpen" type="button" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/>
@@ -403,22 +500,39 @@ body {
 
   <!-- ===== Desktop-only reactor layout (hidden under 980px, .bento above takes over) ===== -->
   <div class="hud-scatter">
+    <div class="hud-scanlines"></div>
+    <div id="traceLayer"></div>
+
+    <div class="hud-corner tl"><span class="hud-corner-text">sys // <b>online</b><br>build <span id="hudBuild">-</span></span></div>
+    <div class="hud-corner tr"><span class="hud-corner-text" id="hudGoalsReadout">goals -/-</span></div>
+    <div class="hud-corner bl"><span class="hud-corner-text" id="hudWaterReadout">hydration -/-</span></div>
+    <div class="hud-corner br"><span class="hud-corner-text" id="hudClockReadout">--:--:--</span></div>
+
     <div class="reactor">
-      <svg class="reactor-rings" viewBox="0 0 400 400">
+      <div class="reactor-halo"></div>
+      <div class="reactor-sweep"></div>
+      <div class="reactor-orbit reactor-orbit-a"><span class="dot"></span></div>
+      <div class="reactor-orbit reactor-orbit-b"><span class="dot"></span></div>
+      <div class="reactor-orbit reactor-orbit-c"><span class="dot"></span></div>
+      <svg class="reactor-rings" viewBox="0 0 400 400" id="reactorRingsSvg">
         <circle class="r-track" cx="200" cy="200" r="188"/>
         <circle class="r-arc r-arc-cyan" cx="200" cy="200" r="188" stroke-dasharray="220 960"/>
+        <circle class="r-track" cx="200" cy="200" r="164"/>
+        <circle class="r-inner-dash" cx="200" cy="200" r="164"/>
         <circle class="r-track" cx="200" cy="200" r="150"/>
         <circle class="r-arc r-arc-amber" cx="200" cy="200" r="150" stroke-dasharray="160 760"/>
+        <circle class="r-track" cx="200" cy="200" r="130"/>
+        <circle class="r-arc r-arc-teal" cx="200" cy="200" r="130" stroke-dasharray="120 700"/>
         <circle class="r-core-ring" cx="200" cy="200" r="108"/>
       </svg>
       <div class="reactor-core">
         <div class="reactor-time" id="reactorTime">00:00</div>
-        <div class="reactor-date" id="reactorDate">—</div>
-        <div class="reactor-label">rowans dashboard</div>
+        <div class="reactor-date" id="reactorDate">-</div>
+        <div class="reactor-label">riley's dashboard</div>
       </div>
     </div>
 
-    <a class="hud-dial" href="main.html" style="--accent:#4dd6a8; --dx:14%; --dy:16%;">
+    <a class="hud-dial" href="main.html" style="--accent:#4dd6a8; --dx:14%; --dy:16%; --boot-delay:0.05s;">
       <div class="hud-dial-ring-wrap">
         <svg viewBox="0 0 100 100">
           <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
@@ -430,7 +544,7 @@ body {
       <span class="hud-dial-sub" id="dialMainSub">goals</span>
     </a>
 
-    <a class="hud-dial" href="gym.html" style="--accent:#f0a83c; --dx:50%; --dy:8%;">
+    <a class="hud-dial" href="gym.html" style="--accent:#f0a83c; --dx:50%; --dy:8%; --boot-delay:0.12s;">
       <div class="hud-dial-ring-wrap">
         <svg viewBox="0 0 100 100">
           <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
@@ -442,7 +556,7 @@ body {
       <span class="hud-dial-sub">workouts</span>
     </a>
 
-    <a class="hud-dial" href="health.html" style="--accent:#3fd9ff; --dx:86%; --dy:16%;">
+    <a class="hud-dial" href="health.html" style="--accent:#3fd9ff; --dx:86%; --dy:16%; --boot-delay:0.19s;">
       <div class="hud-dial-ring-wrap">
         <svg viewBox="0 0 100 100">
           <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
@@ -454,7 +568,7 @@ body {
       <span class="hud-dial-sub">vitals</span>
     </a>
 
-    <a class="hud-dial" href="po-water.html" style="--accent:#3fd9ff; --dx:8%; --dy:58%;">
+    <a class="hud-dial" href="po-water.html" style="--accent:#3fd9ff; --dx:8%; --dy:58%; --boot-delay:0.26s;">
       <div class="hud-dial-ring-wrap">
         <svg viewBox="0 0 100 100">
           <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
@@ -466,7 +580,7 @@ body {
       <span class="hud-dial-sub" id="dialWaterSub">hydration</span>
     </a>
 
-    <a class="hud-dial" href="finance.html" style="--accent:#4dd6a8; --dx:92%; --dy:58%;">
+    <a class="hud-dial" href="finance.html" style="--accent:#4dd6a8; --dx:92%; --dy:58%; --boot-delay:0.33s;">
       <div class="hud-dial-ring-wrap">
         <svg viewBox="0 0 100 100">
           <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
@@ -478,7 +592,7 @@ body {
       <span class="hud-dial-sub">net worth</span>
     </a>
 
-    <a class="hud-dial" href="caffeine.html" style="--accent:#f0a83c; --dx:26%; --dy:92%;">
+    <a class="hud-dial" href="caffeine.html" style="--accent:#f0a83c; --dx:26%; --dy:92%; --boot-delay:0.40s;">
       <div class="hud-dial-ring-wrap">
         <svg viewBox="0 0 100 100">
           <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
@@ -490,7 +604,7 @@ body {
       <span class="hud-dial-sub">timing</span>
     </a>
 
-    <a class="hud-dial" href="nova-lite.html" style="--accent:#3fd9ff; --dx:72%; --dy:92%;">
+    <a class="hud-dial" href="nova-lite.html" style="--accent:#3fd9ff; --dx:72%; --dy:92%; --boot-delay:0.47s;">
       <div class="hud-dial-ring-wrap">
         <svg viewBox="0 0 100 100">
           <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
@@ -821,6 +935,86 @@ body {
   paintRing(document.getElementById('dialMainFill'), document.getElementById('dialMainSub'), g.done, g.total, 'goals', 'goals');
   const w = getWaterProgress();
   paintRing(document.getElementById('dialWaterFill'), document.getElementById('dialWaterSub'), w.done, w.total, 'hydration', 'today');
+
+  // ---- corner telemetry readouts (all values already computed above) ----
+  const buildEl = document.getElementById('hudBuild');
+  if (buildEl) buildEl.textContent = calendarDateKey();
+  const goalsReadout = document.getElementById('hudGoalsReadout');
+  if (goalsReadout) goalsReadout.textContent = 'goals ' + (g.total ? g.done + '/' + g.total : '-/-');
+  const waterReadout = document.getElementById('hudWaterReadout');
+  if (waterReadout) waterReadout.textContent = 'hydration ' + (w.total ? w.done + '/' + w.total : '-/-');
+  const clockReadout = document.getElementById('hudClockReadout');
+  function tickCornerClock() {
+    if (!clockReadout) return;
+    const now = new Date();
+    clockReadout.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+  }
+  tickCornerClock();
+  setInterval(tickCornerClock, 1000);
+
+  // ---- purely decorative bezel tick marks around the reactor ----
+  function buildTicks() {
+    const svg = document.getElementById('reactorRingsSvg');
+    if (!svg || svg.dataset.ticksBuilt) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const cx = 200, cy = 200, rOuter = 198, rInnerMinor = 191, rInnerMajor = 184;
+    for (let i = 0; i < 60; i++) {
+      const major = i % 5 === 0;
+      const angle = (i / 60) * 2 * Math.PI - Math.PI / 2;
+      const rInner = major ? rInnerMajor : rInnerMinor;
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', String(cx + rOuter * Math.cos(angle)));
+      line.setAttribute('y1', String(cy + rOuter * Math.sin(angle)));
+      line.setAttribute('x2', String(cx + rInner * Math.cos(angle)));
+      line.setAttribute('y2', String(cy + rInner * Math.sin(angle)));
+      line.setAttribute('class', 'r-tick' + (major ? ' r-tick-major' : ''));
+      svg.appendChild(line);
+    }
+    svg.dataset.ticksBuilt = '1';
+  }
+  buildTicks();
+
+  // ---- trace lines from the reactor core to each nav dial, drawn from
+  // actual on-screen geometry so they line up regardless of viewport width ----
+  function layoutTraces() {
+    const scatter = document.querySelector('.hud-scatter');
+    const reactor = document.querySelector('.reactor');
+    const layer = document.getElementById('traceLayer');
+    if (!scatter || !reactor || !layer) return;
+    if (getComputedStyle(scatter).display === 'none') return;
+    layer.innerHTML = '';
+    const sRect = scatter.getBoundingClientRect();
+    const rRect = reactor.getBoundingClientRect();
+    const cx = rRect.left + rRect.width / 2 - sRect.left;
+    const cy = rRect.top + rRect.height / 2 - sRect.top;
+    const rRadius = rRect.width / 2;
+    document.querySelectorAll('.hud-dial').forEach((dial, i) => {
+      const ringWrap = dial.querySelector('.hud-dial-ring-wrap');
+      const dRect = ringWrap.getBoundingClientRect();
+      const dx = dRect.left + dRect.width / 2 - sRect.left;
+      const dy = dRect.top + dRect.height / 2 - sRect.top;
+      const ang = Math.atan2(dy - cy, dx - cx);
+      const fullLen = Math.hypot(dx - cx, dy - cy);
+      const len = Math.max(0, fullLen - rRadius - dRect.width / 2 - 8);
+      const startX = cx + (rRadius + 6) * Math.cos(ang);
+      const startY = cy + (rRadius + 6) * Math.sin(ang);
+      const line = document.createElement('div');
+      line.className = 'hud-trace';
+      line.style.left = startX + 'px';
+      line.style.top = startY + 'px';
+      line.style.width = len + 'px';
+      line.style.transform = 'rotate(' + (ang * 180 / Math.PI) + 'deg)';
+      const pulse = document.createElement('span');
+      pulse.className = 'hud-trace-pulse';
+      pulse.style.animationDelay = (i * 0.4) + 's';
+      line.appendChild(pulse);
+      layer.appendChild(line);
+    });
+  }
+  window.addEventListener('load', layoutTraces);
+  window.addEventListener('resize', layoutTraces);
+  layoutTraces();
+  setTimeout(layoutTraces, 400); // re-run once fonts/layout settle
 })();
 </script>
 </body>
