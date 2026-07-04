@@ -19,7 +19,7 @@ Contact: rowan.wisere@gmail.com
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050a0f">
-<title>Water Coach</title>
+<title>Nutrition & Water</title>
 
 <link rel="stylesheet" href="hud-theme.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -33,7 +33,7 @@ Contact: rowan.wisere@gmail.com
      ============================================================= -->
 <script>
 const CONFIG = {
-  appTitle: "Water Coach",
+  appTitle: "Nutrition & Water",
 
   // Default unit. Options: "bottle" | "glass" | "oz" | "ml"
   unit: "oz",
@@ -477,6 +477,62 @@ html, body {
   .shell { padding: 16px 12px 60px; }
   .water-num { font-size: 48px; }
 }
+
+/* ----- Nutrition ----- */
+.nutri-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+.nutri-macro { }
+.nutri-macro-label {
+  display: flex; justify-content: space-between;
+  font-size: 10px; letter-spacing: 0.1em; color: var(--text-3);
+  margin-bottom: 6px; font-family: var(--font-mono);
+}
+.nutri-macro-track {
+  height: 6px; background: rgba(63,217,255,0.06); border: 1px solid var(--border);
+  overflow: hidden;
+}
+.nutri-macro-fill { height: 100%; background: var(--info); transition: width 0.4s ease; }
+.nutri-macro-fill.protein { background: var(--good); }
+.nutri-macro-fill.carbs   { background: var(--info); }
+.nutri-macro-fill.fat     { background: var(--warn); }
+
+.nutri-add-row {
+  display: grid; grid-template-columns: 1fr 74px 64px 64px 64px auto;
+  gap: 6px; align-items: center; margin-top: 4px;
+}
+.nutri-input {
+  font-size: 13px; padding: 9px 10px; border-radius: 0;
+  border: 1px solid var(--border); background: rgba(0,0,0,0.28);
+  color: var(--text-1); font-family: inherit; min-width: 0;
+}
+.nutri-input::placeholder { color: var(--text-3); }
+.nutri-input:focus { outline: none; border-color: var(--info); }
+.nutri-add-btn {
+  padding: 9px 12px; border: 1px solid var(--info);
+  background: rgba(63,217,255,0.12); color: var(--text-1);
+  border-radius: 0; font-family: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s; white-space: nowrap;
+}
+.nutri-add-btn:hover { background: rgba(63,217,255,0.22); }
+
+.nutri-log-list { margin-top: 14px; }
+.nutri-log-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-top: 1px solid rgba(63,217,255,0.08);
+}
+.nutri-log-item:first-child { border-top: none; }
+.nutri-log-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; }
+.nutri-log-macros { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); white-space: nowrap; }
+.nutri-log-del {
+  background: transparent; border: none; color: var(--text-4);
+  font-size: 16px; cursor: pointer; padding: 2px 6px;
+}
+.nutri-log-del:hover { color: var(--bad); }
+.nutri-log-empty { font-size: 12px; color: var(--text-4); font-style: italic; padding: 6px 0; }
+
+@media (max-width: 560px) {
+  .nutri-add-row { grid-template-columns: 1fr 1fr; }
+  .nutri-add-row .nutri-add-btn { grid-column: 1 / -1; }
+}
 </style>
 </head>
 <body class="hud-grid">
@@ -488,10 +544,51 @@ html, body {
   </button>
 
   <div class="header">
-    <h1 class="title" id="appTitle">Water Coach</h1>
+    <h1 class="title" id="appTitle">Nutrition & Water</h1>
     <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
+  </div>
+
+  <div class="divider"><span>NUTRITION</span></div>
+
+  <div class="card">
+    <div class="water-label">CALORIES TODAY</div>
+    <div class="water-row" style="margin-bottom:0">
+      <span class="water-num" id="nutriCalNum">0</span>
+      <span class="water-target" id="nutriCalTarget">/ 2000</span>
+    </div>
+    <div class="water-bar-wrap">
+      <div class="water-bar-track">
+        <div class="water-bar-fill" id="nutriCalBarFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="nutri-macros">
+      <div class="nutri-macro">
+        <div class="nutri-macro-label"><span>Protein</span><span id="nutriProteinText">0 / 0g</span></div>
+        <div class="nutri-macro-track"><div class="nutri-macro-fill protein" id="nutriProteinFill" style="width:0%"></div></div>
+      </div>
+      <div class="nutri-macro">
+        <div class="nutri-macro-label"><span>Carbs</span><span id="nutriCarbsText">0 / 0g</span></div>
+        <div class="nutri-macro-track"><div class="nutri-macro-fill carbs" id="nutriCarbsFill" style="width:0%"></div></div>
+      </div>
+      <div class="nutri-macro">
+        <div class="nutri-macro-label"><span>Fat</span><span id="nutriFatText">0 / 0g</span></div>
+        <div class="nutri-macro-track"><div class="nutri-macro-fill fat" id="nutriFatFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="nutri-add-row">
+      <input class="nutri-input" id="nutriAddName" type="text" placeholder="Food (e.g. Chicken breast)" autocomplete="off" />
+      <input class="nutri-input" id="nutriAddCal" type="number" min="0" placeholder="kcal" />
+      <input class="nutri-input" id="nutriAddProtein" type="number" min="0" placeholder="P g" />
+      <input class="nutri-input" id="nutriAddCarbs" type="number" min="0" placeholder="C g" />
+      <input class="nutri-input" id="nutriAddFat" type="number" min="0" placeholder="F g" />
+      <button class="nutri-add-btn" id="nutriAddBtn" type="button">+ Add</button>
+    </div>
+
+    <div class="nutri-log-list" id="nutriLogList"></div>
   </div>
 
   <div class="divider"><span>WATER</span></div>
@@ -630,6 +727,28 @@ html, body {
     </div>
 
     <div class="set-section">
+      <h4>Nutrition goals</h4>
+      <div class="field">
+        <label>Daily calories</label>
+        <input type="number" id="setNutriCal" min="0" max="10000" step="50">
+      </div>
+      <div class="field-row" style="grid-template-columns: 1fr 1fr 1fr">
+        <div class="field">
+          <label>Protein (g)</label>
+          <input type="number" id="setNutriProtein" min="0" max="500" step="5">
+        </div>
+        <div class="field">
+          <label>Carbs (g)</label>
+          <input type="number" id="setNutriCarbs" min="0" max="900" step="5">
+        </div>
+        <div class="field">
+          <label>Fat (g)</label>
+          <input type="number" id="setNutriFat" min="0" max="400" step="5">
+        </div>
+      </div>
+    </div>
+
+    <div class="set-section">
       <h4>Stimulants & meds</h4>
       <div class="field">
         <label>Search to add</label>
@@ -743,7 +862,7 @@ html, body {
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
   }
   let state = loadState();
-  $('appTitle').textContent = CONFIG.appTitle || 'Water Coach';
+  $('appTitle').textContent = CONFIG.appTitle || 'Nutrition & Water';
 
   // Helpers
   function dateKey(d) {
@@ -1133,6 +1252,122 @@ html, body {
   renderAll();
 })();
 </script>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const NUTRI_KEY = 'nutrition_v1';
+
+  function loadNutri() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(NUTRI_KEY)); } catch (e) {}
+    s = s || {};
+    s.goals = Object.assign({ calories: 2000, protein: 150, carbs: 220, fat: 65 }, s.goals || {});
+    s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};
+    return s;
+  }
+  function saveNutri() {
+    try { localStorage.setItem(NUTRI_KEY, JSON.stringify(nState)); } catch (e) {}
+  }
+  let nState = loadNutri();
+
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function todayEntries() {
+    return nState.logs[todayKey()] || [];
+  }
+  function escape(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function renderNutrition() {
+    const entries = todayEntries();
+    const totals = entries.reduce((acc, e) => {
+      acc.cal += e.cal || 0; acc.protein += e.protein || 0; acc.carbs += e.carbs || 0; acc.fat += e.fat || 0;
+      return acc;
+    }, { cal: 0, protein: 0, carbs: 0, fat: 0 });
+    const g = nState.goals;
+
+    $('nutriCalNum').textContent = Math.round(totals.cal).toLocaleString();
+    $('nutriCalTarget').textContent = '/ ' + g.calories.toLocaleString();
+    const calPct = g.calories ? Math.min(100, (totals.cal / g.calories) * 100) : 0;
+    $('nutriCalBarFill').style.width = calPct + '%';
+    $('nutriCalBarFill').classList.toggle('over', totals.cal > g.calories);
+
+    function macro(key, id) {
+      const pct = g[key] ? Math.min(100, (totals[key] / g[key]) * 100) : 0;
+      $('nutri' + id + 'Fill').style.width = pct + '%';
+      $('nutri' + id + 'Text').textContent = Math.round(totals[key]) + ' / ' + g[key] + 'g';
+    }
+    macro('protein', 'Protein');
+    macro('carbs', 'Carbs');
+    macro('fat', 'Fat');
+
+    const listEl = $('nutriLogList');
+    if (!entries.length) {
+      listEl.innerHTML = '<div class="nutri-log-empty">No food logged yet today.</div>';
+    } else {
+      listEl.innerHTML = entries.map(e => (
+        '<div class="nutri-log-item">' +
+          '<span class="nutri-log-name">' + escape(e.name) + '</span>' +
+          '<span class="nutri-log-macros">' + Math.round(e.cal || 0) + ' kcal · P' + Math.round(e.protein || 0) + ' C' + Math.round(e.carbs || 0) + ' F' + Math.round(e.fat || 0) + '</span>' +
+          '<button class="nutri-log-del" data-id="' + e.id + '" aria-label="Delete">×</button>' +
+        '</div>'
+      )).join('');
+    }
+  }
+
+  $('nutriAddBtn').addEventListener('click', () => {
+    const name = $('nutriAddName').value.trim();
+    if (!name) { $('nutriAddName').focus(); return; }
+    const entry = {
+      id: 'n' + Date.now() + Math.random().toString(36).slice(2, 6),
+      name: name,
+      cal: parseFloat($('nutriAddCal').value) || 0,
+      protein: parseFloat($('nutriAddProtein').value) || 0,
+      carbs: parseFloat($('nutriAddCarbs').value) || 0,
+      fat: parseFloat($('nutriAddFat').value) || 0,
+    };
+    const key = todayKey();
+    nState.logs[key] = nState.logs[key] || [];
+    nState.logs[key].push(entry);
+    saveNutri();
+    ['nutriAddName', 'nutriAddCal', 'nutriAddProtein', 'nutriAddCarbs', 'nutriAddFat'].forEach(id => { $(id).value = ''; });
+    renderNutrition();
+  });
+
+  $('nutriLogList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.nutri-log-del');
+    if (!btn) return;
+    const key = todayKey();
+    nState.logs[key] = (nState.logs[key] || []).filter(x => x.id !== btn.dataset.id);
+    saveNutri();
+    renderNutrition();
+  });
+
+  function renderNutriSettings() {
+    $('setNutriCal').value = nState.goals.calories;
+    $('setNutriProtein').value = nState.goals.protein;
+    $('setNutriCarbs').value = nState.goals.carbs;
+    $('setNutriFat').value = nState.goals.fat;
+  }
+  $('settingsBtn').addEventListener('click', renderNutriSettings);
+  [['setNutriCal', 'calories'], ['setNutriProtein', 'protein'], ['setNutriCarbs', 'carbs'], ['setNutriFat', 'fat']].forEach(([id, key]) => {
+    $(id).addEventListener('input', () => {
+      nState.goals[key] = parseFloat($(id).value) || 0;
+      saveNutri();
+      renderNutrition();
+    });
+  });
+
+  window.addEventListener('storage', () => { nState = loadNutri(); renderNutrition(); });
+
+  renderNutrition();
+})();
+</script>
+
 <style>
 /* === iPhone bottom-safe-area fix ===
    The Done button in the settings modal + the bottom of the page were
@@ -1162,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'health',
-    syncedKeys: ['po_water_v1'],
+    syncedKeys: ['po_water_v1', 'nutrition_v1'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }
