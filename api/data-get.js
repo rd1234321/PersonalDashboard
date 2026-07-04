@@ -42,6 +42,7 @@ async function enrichPortfolioWithLiveQuotes(data) {
   if (!data || !Array.isArray(data.positions) || !data.positions.length) return data;
 
   const apiKey = process.env.FINNHUB_API_KEY;
+  if (!apiKey) console.warn('[portfolio] FINNHUB_API_KEY not set — all positions will show price_source: cached');
   const enrichedPositions = await Promise.all(data.positions.map(async (pos) => {
     if (!pos || typeof pos.symbol !== 'string') return pos;
     if (!apiKey) return Object.assign({}, pos, { price_source: 'cached' });
@@ -58,6 +59,7 @@ async function enrichPortfolioWithLiveQuotes(data) {
         _day_change_pct: quote.dp,
       });
     } catch (e) {
+      console.warn('[portfolio] live quote failed for ' + pos.symbol + ': ' + (e && e.message ? e.message : e));
       return Object.assign({}, pos, { price_source: 'cached' });
     }
   }));
