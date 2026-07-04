@@ -543,9 +543,54 @@ main {
     .ah-hero-chart { width:100%; height:120px; display:block; }
     .ah-hero-range { display:flex; justify-content:space-between; margin-top:6px; font-size:9.5px; color:var(--text-tertiary); letter-spacing:0.06em; }
 
+    /* ----- top row: ring-gauge vitals ----- */
+    .ah-vitals {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .ah-vital {
+      position: relative;
+      background: rgba(63,217,255,0.03);
+      border: none;
+      padding: 16px 16px 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .ah-vital:hover { background: #0a1319; }
+    .ah-vital::before, .ah-vital::after { content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
+    .ah-vital::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-vital::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-vital-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
+    .ah-vital-label { font-size:10px; font-weight:700; letter-spacing:0.12em; color:var(--text-tertiary); line-height:1.4; }
+    .ah-expand-hint { font-size:9.5px; font-weight:700; letter-spacing:0.06em; color:#2a5560; white-space:nowrap; transition:color 0.15s; }
+    .ah-vital:hover .ah-expand-hint, .ah-metric:hover .ah-expand-hint { color:#3fd9ff; }
+    .ah-vital-ring-row { display:flex; align-items:center; gap:14px; }
+    .ah-vital-trend { font-size:11px; font-family:var(--font-mono); color:var(--text-tertiary); line-height:1.4; }
+
+    /* ----- full-width trend chart card (reused for detail panels too) ----- */
+    .ah-trend-card {
+      position: relative;
+      background: rgba(63,217,255,0.045);
+      border: none; margin-bottom: 12px; padding: 18px 20px 16px;
+      overflow: hidden;
+    }
+    .ah-trend-card::before, .ah-trend-card::after { content:''; position:absolute; width:18px; height:18px; pointer-events:none; }
+    .ah-trend-card::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-trend-card::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-hero-top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+    .ah-hero-label { font-size:11px; font-weight:700; letter-spacing:0.18em; color:var(--text-tertiary); }
+    .ah-hero-val { font-size:46px; font-weight:700; line-height:1; color:var(--text-primary); font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+    .ah-hero-units { font-size:14px; color:var(--text-tertiary); margin-left:6px; font-weight:600; }
+    .ah-hero-trend { font-size:12px; font-family:var(--font-mono); color:var(--text-tertiary); padding-bottom:8px; }
+    .ah-hero-chart { width:100%; height:120px; display:block; }
+    .ah-hero-range { display:flex; justify-content:space-between; margin-top:6px; font-size:9.5px; color:var(--text-tertiary); letter-spacing:0.06em; }
+
     .ah-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 10px;
     }
     .ah-metric {
@@ -554,11 +599,14 @@ main {
       border: none; border-radius: 0;
       padding: 14px 14px 10px;
       overflow: hidden;
+      cursor: pointer;
+      transition: background 0.15s;
     }
+    .ah-metric:hover { background: #0a1319; }
     .ah-metric::before, .ah-metric::after { content:''; position:absolute; width:10px; height:10px; pointer-events:none; }
     .ah-metric::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); opacity:0.6; }
     .ah-metric::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); opacity:0.6; }
-    .ah-metric-top { margin-bottom:2px; }
+    .ah-metric-top { display:flex; align-items:flex-start; justify-content:space-between; gap:6px; margin-bottom:2px; }
     .ah-metric-label { display:block; font-size:10px; font-weight:700; letter-spacing:0.12em; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .ah-metric-val-row { display:flex; align-items:baseline; justify-content:space-between; gap:6px; }
     .ah-metric-trend { font-size:9.5px; font-family:var(--font-mono); color:var(--text-tertiary); flex-shrink:0; white-space:nowrap; }
@@ -567,7 +615,38 @@ main {
     .ah-metric-chart { width:100%; height:38px; margin-top:8px; display:block; }
     .ah-metric-days { font-size:9px; color:var(--text-tertiary); letter-spacing:0.08em; margin-top:2px; }
     .ah-bars rect:last-of-type { filter: drop-shadow(0 0 6px var(--ah-c, var(--hud-cyan))); }
-    @media (max-width:480px) { .ah-grid { grid-template-columns: repeat(2, 1fr); } .ah-hero-val { font-size:36px; } }
+
+    /* ----- click-to-expand detail panel ----- */
+    .ah-detail {
+      position: relative;
+      background: rgba(63,217,255,0.05);
+      border: none; margin-top: 12px; padding: 18px 20px 20px;
+      overflow: hidden;
+      animation: hud-reveal 0.2s ease;
+    }
+    .ah-detail::before, .ah-detail::after { content:''; position:absolute; width:18px; height:18px; pointer-events:none; }
+    .ah-detail::before { top:0; left:0; border-top:1px solid var(--ah-c, var(--hud-cyan)); border-left:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-detail::after  { bottom:0; right:0; border-bottom:1px solid var(--ah-c, var(--hud-cyan)); border-right:1px solid var(--ah-c, var(--hud-cyan)); }
+    .ah-detail-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .ah-detail-title { font-size:12px; font-weight:700; letter-spacing:0.14em; color:var(--text-tertiary); }
+    .ah-detail-val { font-size:32px; font-weight:700; color:var(--text-primary); line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; margin-top:6px; }
+    .ah-detail-units { font-size:13px; color:var(--text-tertiary); margin-left:6px; font-weight:600; }
+    .ah-detail-close { border:0; background:transparent; color:#4a6b78; font-family:inherit; font-size:11px; font-weight:700; letter-spacing:0.06em; cursor:pointer; padding:6px 4px; transition:color 0.15s; flex-shrink:0; }
+    .ah-detail-close:hover { color:#e6f7fb; }
+    .ah-detail-chart { width:100%; height:150px; display:block; margin:14px 0 8px; }
+    .ah-detail-stats { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:10px; }
+    .ah-detail-stat { background:rgba(63,217,255,0.03); padding:10px 12px; text-align:center; }
+    .ah-detail-stat-label { font-size:9px; font-weight:700; letter-spacing:0.12em; color:var(--text-tertiary); margin-bottom:4px; }
+    .ah-detail-stat-val { font-size:16px; font-weight:700; color:var(--text-primary); font-variant-numeric:tabular-nums; }
+    .ah-detail-trend { font-size:12px; font-family:var(--font-mono); color:var(--text-tertiary); margin-top:10px; }
+    .ah-detail-empty { font-size:12px; color:var(--text-tertiary); line-height:1.6; margin-top:10px; }
+
+    @media (max-width:480px) {
+      .ah-grid { grid-template-columns: repeat(2, 1fr); }
+      .ah-vitals { grid-template-columns: repeat(2, 1fr); }
+      .ah-hero-val { font-size:36px; }
+      .ah-detail-stats { grid-template-columns: repeat(3, 1fr); gap:6px; }
+    }
   </style>
   <div class="section-title">Apple Health</div>
   <div class="ah-card">
@@ -589,8 +668,10 @@ main {
           <button id="ahRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
         </div>
       </div>
+      <div id="ahVitals" class="ah-vitals"></div>
       <div id="ahHero"></div>
       <div id="ahGrid" class="ah-grid"></div>
+      <div id="ahDetail"></div>
     </div>
   </div>
   <script>
@@ -697,15 +778,89 @@ main {
       return ia - ib;
     }
 
+    // How many rings across the top row, and how many secondary tiles get
+    // fed to the trend hero vs. the plain grid below.
+    const AH_VITAL_COUNT = 4;
+    let ahOpenDetail = null; // name of the metric whose detail panel is open
+
+    function ringSVG(points, color, size, stroke) {
+      const r = (size - stroke) / 2;
+      const c = 2 * Math.PI * r;
+      let pct = 0.5;
+      if (points && points.length) {
+        const vals = points.map(p => p.value);
+        const min = Math.min(...vals), max = Math.max(...vals);
+        const last = vals[vals.length - 1];
+        pct = max > min ? (last - min) / (max - min) : 1;
+      }
+      const offset = c * (1 - Math.max(0.04, Math.min(1, pct)));
+      return (
+        '<svg class="hud-ring" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+          '<circle class="hud-ring-track" cx="' + size/2 + '" cy="' + size/2 + '" r="' + r + '" stroke-width="' + stroke + '"/>' +
+          '<circle class="hud-ring-fill" cx="' + size/2 + '" cy="' + size/2 + '" r="' + r + '" stroke-width="' + stroke +
+            '" stroke="' + color + '" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '"/>' +
+        '</svg>'
+      );
+    }
+
+    function areaChartSVG(points, color, w, h) {
+      if (!points || points.length < 2) return '';
+      const vals = points.map(p => p.value);
+      const min = Math.min(...vals), max = Math.max(...vals, min + 0.0001);
+      const n = points.length;
+      const pad = 4;
+      const xAt = i => (i / (n - 1)) * (w - pad * 2) + pad;
+      const yAt = v => h - pad - ((v - min) / (max - min)) * (h - pad * 2);
+      const line = points.map((p, i) => xAt(i).toFixed(1) + ',' + yAt(p.value).toFixed(1)).join(' L ');
+      const areaPath = 'M ' + xAt(0).toFixed(1) + ',' + (h - pad).toFixed(1) + ' L ' + line + ' L ' + xAt(n - 1).toFixed(1) + ',' + (h - pad).toFixed(1) + ' Z';
+      const grid = '<line x1="0" y1="' + (h/2).toFixed(1) + '" x2="' + w + '" y2="' + (h/2).toFixed(1) + '" stroke="rgba(63,217,255,0.10)" stroke-width="1"/>';
+      return (
+        '<svg width="100%" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="display:block">' +
+          grid +
+          '<path d="' + areaPath + '" fill="' + color + '" opacity="0.14" stroke="none"/>' +
+          '<path d="M ' + line + '" fill="none" stroke="' + color + '" stroke-width="1.5"/>' +
+        '</svg>'
+      );
+    }
+
+    function statsOf(points) {
+      const vals = points.map(p => p.value);
+      const min = Math.min(...vals), max = Math.max(...vals);
+      const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+      return { min, max, avg };
+    }
+
+    function fmtNum(n) {
+      return (Math.round(n * 100) / 100).toLocaleString();
+    }
+
+    function renderVitals(entries) {
+      document.getElementById('ahVitals').innerHTML = entries.map(([name, m], i) => {
+        const color = AH_COLORS[i % AH_COLORS.length];
+        const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
+        return (
+          '<div class="ah-vital" style="--ah-c:' + color + '" data-metric="' + esc(name) + '">' +
+            '<div class="ah-vital-top"><span class="ah-vital-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
+            '<div class="ah-vital-ring-row">' +
+              '<div class="hud-ring-wrap">' + ringSVG(points, color, 76, 6) +
+                '<div class="hud-ring-center"><span class="hud-ring-value" style="font-size:19px">' + esc(m.value) + '</span><span class="hud-ring-caption" style="font-size:8px">' + esc(m.units || '') + '</span></div>' +
+              '</div>' +
+              trendHTML(points, 'ah-vital-trend') +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
     function renderHero(name, m, color) {
       const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
       const range = points.length > 1
         ? '<div class="ah-hero-range"><span>' + esc(shortDate(points[0].date)) + '</span><span>' + esc(shortDate(points[points.length - 1].date)) + '</span></div>'
         : '';
       document.getElementById('ahHero').innerHTML = (
-        '<div class="ah-hero" style="--ah-c:' + color + '">' +
+        '<div class="ah-trend-card" style="--ah-c:' + color + '">' +
           '<div class="ah-hero-top">' +
-            '<div><div class="ah-hero-label">' + esc(m.label) + ' — last ' + points.length + ' ' + rangeNoun(ahRange) + '</div>' +
+            '<div><div class="ah-hero-label">' + esc(m.label) + ' trend — last ' + points.length + ' ' + rangeNoun(ahRange) + '</div>' +
             '<span class="ah-hero-val">' + esc(m.value) + '</span><span class="ah-hero-units">' + esc(m.units || '') + '</span></div>' +
             trendHTML(points, 'ah-hero-trend') +
           '</div>' +
@@ -719,31 +874,96 @@ main {
       document.getElementById('ahGrid').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
         const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange) + 8);
-        const days = m.points ? m.points.length : 0;
         return (
-          '<div class="ah-metric" style="--ah-c:' + color + '">' +
-            '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span></div>' +
-            '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></span>' + trendHTML(points, 'ah-metric-trend') + '</div>' +
-            barsSVG(points, color, 200, 38, 'ah-metric-chart') +
-            (days > 1 ? '<div class="ah-metric-days">' + days + ' days tracked</div>' : '') +
+          '<div class="ah-metric" style="--ah-c:' + color + '" data-metric="' + esc(name) + '">' +
+            '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
+            '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></span></div>' +
           '</div>'
         );
       }).join('');
+    }
+
+    // Renders the inline detail panel for one metric and wires up its close
+    // control. Reuses the same range (day/week/month) as the rest of the card.
+    function renderDetail(name, m, color) {
+      const detailEl = document.getElementById('ahDetail');
+      const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange) + 8);
+      let body;
+      if (points.length >= 3) {
+        const s = statsOf(points);
+        body = (
+          areaChartSVG(points, color, 640, 150).replace('<svg ', '<svg class="ah-detail-chart" ') +
+          '<div class="ah-detail-stats">' +
+            '<div class="ah-detail-stat"><div class="ah-detail-stat-label">MIN</div><div class="ah-detail-stat-val">' + fmtNum(s.min) + '</div></div>' +
+            '<div class="ah-detail-stat"><div class="ah-detail-stat-label">AVG</div><div class="ah-detail-stat-val">' + fmtNum(s.avg) + '</div></div>' +
+            '<div class="ah-detail-stat"><div class="ah-detail-stat-label">MAX</div><div class="ah-detail-stat-val">' + fmtNum(s.max) + '</div></div>' +
+          '</div>' +
+          trendHTML(points, 'ah-detail-trend')
+        );
+      } else {
+        body = '<div class="ah-detail-empty">Not enough history yet to chart ' + esc(m.label.toLowerCase()) + ' over time — this fills in as more syncs come in from your phone.</div>';
+      }
+      detailEl.innerHTML = (
+        '<div class="ah-detail" style="--ah-c:' + color + '">' +
+          '<div class="ah-detail-head">' +
+            '<div><div class="ah-detail-title">' + esc(m.label) + ' — ' + rangeNoun(ahRange) + '</div>' +
+            '<span class="ah-detail-val">' + esc(m.value) + '</span><span class="ah-detail-units">' + esc(m.units || '') + '</span></div>' +
+            '<button type="button" class="ah-detail-close" id="ahDetailClose">‹ back</button>' +
+          '</div>' +
+          body +
+        '</div>'
+      );
+      document.getElementById('ahDetailClose').addEventListener('click', closeDetail);
+      detailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeDetail() {
+      ahOpenDetail = null;
+      document.getElementById('ahDetail').innerHTML = '';
+    }
+
+    function openDetail(name) {
+      if (!ahLastMetrics || !ahLastMetrics[name]) return;
+      if (ahOpenDetail === name) { closeDetail(); return; }
+      ahOpenDetail = name;
+      const entries = Object.entries(ahLastMetrics).sort(metricOrder);
+      const idx = entries.findIndex(([n]) => n === name);
+      const color = AH_COLORS[Math.max(0, idx) % AH_COLORS.length];
+      renderDetail(name, ahLastMetrics[name], color);
     }
 
     function renderMetrics(metrics) {
       ahLastMetrics = metrics;
       const entries = Object.entries(metrics).sort(metricOrder);
       if (!entries.length) return;
+      const vitals = entries.slice(0, AH_VITAL_COUNT);
+      renderVitals(vitals);
       // Feature whichever priority metric actually has enough history to
       // chart; fall back to the metric with the most days tracked.
       let heroIdx = entries.findIndex(([, m]) => m.points && m.points.length >= 2);
       if (heroIdx === -1) heroIdx = 0;
       const [heroName, heroM] = entries[heroIdx];
-      renderHero(heroName, heroM, AH_COLORS[0]);
-      const rest = entries.filter((_, i) => i !== heroIdx);
-      renderGrid(rest, 1);
+      renderHero(heroName, heroM, AH_COLORS[heroIdx % AH_COLORS.length]);
+      const rest = entries.filter((_, i) => i >= AH_VITAL_COUNT);
+      renderGrid(rest, AH_VITAL_COUNT);
+      // Re-open whatever detail panel was showing (e.g. after a range switch
+      // or a refresh) so it doesn't silently vanish under the user.
+      if (ahOpenDetail && metrics[ahOpenDetail]) {
+        const idx = entries.findIndex(([n]) => n === ahOpenDetail);
+        renderDetail(ahOpenDetail, metrics[ahOpenDetail], AH_COLORS[Math.max(0, idx) % AH_COLORS.length]);
+      } else {
+        closeDetail();
+      }
     }
+
+    document.getElementById('ahVitals').addEventListener('click', e => {
+      const card = e.target.closest('.ah-vital');
+      if (card) openDetail(card.dataset.metric);
+    });
+    document.getElementById('ahGrid').addEventListener('click', e => {
+      const card = e.target.closest('.ah-metric');
+      if (card) openDetail(card.dataset.metric);
+    });
 
     const ahRangeSeg = document.getElementById('ahRangeSeg');
     if (ahRangeSeg) ahRangeSeg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
