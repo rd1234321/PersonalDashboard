@@ -61,6 +61,68 @@ main {
   padding-top: max(56px, env(safe-area-inset-top, 56px));
 }
 
+/* ----- side telemetry rails — decorative HUD filler for the wide margins
+   on desktop; hidden below 1300px where there's no room for them ----- */
+.side-rail {
+  display: none;
+  position: fixed; top: 0; bottom: 0; width: 180px;
+  z-index: 1; pointer-events: none;
+  padding: 90px 0 40px;
+  flex-direction: column; align-items: center;
+  justify-content: space-between;
+}
+.side-rail.left  { left: 0; }
+.side-rail.right { right: 0; }
+.side-rail-tick-col {
+  flex: 1; width: 1px; margin: 18px 0;
+  background: repeating-linear-gradient(
+    to bottom, rgba(63,217,255,0.22) 0, rgba(63,217,255,0.22) 1px,
+    transparent 1px, transparent 14px
+  );
+  position: relative;
+}
+.side-rail-tick-col::before, .side-rail-tick-col::after {
+  content: ''; position: absolute; left: -3px; width: 7px; height: 1px;
+  background: var(--hud-cyan, #3fd9ff); opacity: 0.5;
+}
+.side-rail-tick-col::before { top: 0; }
+.side-rail-tick-col::after { bottom: 0; }
+.side-rail-label {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.3em;
+  color: var(--text-tertiary, #4a6b78);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+.side-rail.left .side-rail-label { transform: rotate(180deg); }
+.side-rail-clock {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.12em;
+  color: var(--text-tertiary, #4a6b78);
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+.side-rail-dot-row {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+  color: var(--text-tertiary, #4a6b78);
+  writing-mode: vertical-rl; white-space: nowrap;
+}
+.side-rail-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--hud-teal, #4dd6a8);
+  animation: hud-pulse 2.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@media (min-width: 1300px) {
+  .side-rail { display: flex; }
+}
+@media (min-width: 1550px) {
+  .side-rail { width: 220px; }
+}
+
 .section-title {
   font-family: var(--font-mono);
   font-size: 11px; font-weight: 600;
@@ -486,6 +548,26 @@ main {
 </style>
 </head>
 <body class="hud-grid">
+
+<div class="side-rail left" aria-hidden="true">
+  <div class="side-rail-label">HEALTH TELEMETRY // NODE 04</div>
+  <div class="side-rail-tick-col"></div>
+  <div class="side-rail-dot-row"><span class="side-rail-dot"></span>LINK STABLE</div>
+</div>
+<div class="side-rail right" aria-hidden="true">
+  <div class="side-rail-clock" id="sideRailClock">--:--:--</div>
+  <div class="side-rail-tick-col"></div>
+  <div class="side-rail-label">BIOMETRIC FEED // APPLE HEALTH</div>
+</div>
+<script>
+(function () {
+  var el = document.getElementById('sideRailClock');
+  if (!el) return;
+  function tick() { el.textContent = new Date().toLocaleTimeString('en-US', { hour12: false }); }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
 
 <main>
 
