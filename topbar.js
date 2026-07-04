@@ -30,6 +30,19 @@
   border-bottom: 1px solid rgba(63, 217, 255, 0.16);
   font-family: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
 }
+.topbar-left {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+}
+.topbar-home {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; flex-shrink: 0;
+  color: #4a6b78;
+  text-decoration: none;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.topbar-home:hover { color: #3fd9ff; }
+.topbar-home svg { width: 16px; height: 16px; display: block; }
 .topbar-status {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 10px; letter-spacing: 0.12em;
@@ -222,7 +235,12 @@ body.topbar-modal-open {
   // -------- HTML --------
   const topbarHtml = `
 <header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
-  <span class="topbar-status"><span class="topbar-status-dot"></span><span>system online</span></span>
+  <div class="topbar-left">
+    <a href="index.html" class="topbar-home" aria-label="Back to main dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V8.5"/></svg>
+    </a>
+    <span class="topbar-status"><span class="topbar-status-dot"></span><span>system online</span></span>
+  </div>
   <div class="topbar-actions">
     <div class="topbar-water-wrap">
       <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">

@@ -24,6 +24,9 @@ body { font-family: var(--hud-font); color: var(--fg); min-height: 100vh; }
 
 .shell { max-width: 1080px; margin: 0 auto; padding: 32px 20px 80px; }
 header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+.back-link { display: inline-flex; align-items: center; justify-content: center; align-self: center; width: 28px; height: 28px; flex-shrink: 0; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.back-link:hover { color: var(--c1); }
+.back-link svg { width: 16px; height: 16px; display: block; }
 header h1 { font-family: var(--hud-font); font-style: normal; font-weight: 500; font-size: 30px; letter-spacing: 0.04em; color: var(--c1); }
 header .role { font-family: var(--hud-font); font-size: 10px; letter-spacing: .12em; color: var(--muted); }
 .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 26px; }
@@ -155,6 +158,9 @@ header .role { font-family: var(--hud-font); font-size: 10px; letter-spacing: .1
 <body class="hud-grid" data-state="idle">
   <div class="shell">
     <header>
+      <a href="index.html" class="back-link" aria-label="Back to main dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V8.5"/></svg>
+      </a>
       <h1>Avatar Lab</h1><span class="role">Nova design playground</span>
       <span class="hud-status"><span class="hud-status-dot"></span><span>system online</span></span>
     </header>
