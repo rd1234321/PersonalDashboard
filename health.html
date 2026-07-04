@@ -660,6 +660,80 @@ main {
       </div>
     </div>
   </div>
+
+  <!-- ===== Apple Health card (fed by the Health Auto Export webhook, not a live API) ===== -->
+  <div class="whoop-section">
+    <div class="section-title">Apple Health</div>
+    <div class="whoop-card">
+      <div id="ahEmpty" class="wh-disc">
+        <div class="wh-brand"><span class="wh-brand-mark">🍎</span><span class="wh-brand-text">APPLE HEALTH</span></div>
+        <div class="wh-disc-title">Not synced yet</div>
+        <div class="wh-disc-sub">Install <b>Health Auto Export</b> on your iPhone and point its REST API automation at this dashboard — see SETUP.md for the walkthrough. Data pushes in from your phone, there's nothing to connect here.</div>
+      </div>
+      <div id="ahConn" style="display:none">
+        <div class="wh-head">
+          <div class="wh-brand"><span class="wh-brand-mark">🍎</span><span class="wh-brand-text">APPLE HEALTH</span><span class="wh-live"><span class="wh-live-dot"></span>synced</span></div>
+          <div class="wh-head-right">
+            <span id="ahUpdated" class="wh-updated">—</span>
+            <button id="ahRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
+          </div>
+        </div>
+        <div id="ahGrid" class="wh-stats" style="grid-template-columns:repeat(3,1fr)"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    'use strict';
+    const AH_SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
+    const AH_SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+    function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+    function relTime(iso) {
+      if (!iso) return '—';
+      const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.floor(s / 60) + ' min ago';
+      if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+      return Math.floor(s / 86400) + ' d ago';
+    }
+    let ahSupa = null;
+    function ahClient() {
+      if (ahSupa) return ahSupa;
+      if (!window.supabase || !AH_SUPABASE_URL || !AH_SUPABASE_KEY) return null;
+      ahSupa = window.supabase.createClient(AH_SUPABASE_URL, AH_SUPABASE_KEY);
+      return ahSupa;
+    }
+    async function loadAppleHealth() {
+      const client = ahClient();
+      const empty = document.getElementById('ahEmpty');
+      const conn = document.getElementById('ahConn');
+      if (!client || !empty || !conn) return;
+      try {
+        const { data, error } = await client.from('app_state').select('data').eq('key', 'apple_health').maybeSingle();
+        const metrics = data && data.data && data.data.metrics;
+        if (error || !metrics || !Object.keys(metrics).length) {
+          empty.style.display = ''; conn.style.display = 'none';
+          return;
+        }
+        empty.style.display = 'none'; conn.style.display = '';
+        document.getElementById('ahUpdated').textContent = relTime(data.data.updatedAt);
+        document.getElementById('ahGrid').innerHTML = Object.values(metrics).map(m => (
+          '<div class="wh-stat"><div class="wh-stat-label">' + esc(m.label) + '</div>' +
+          '<div class="wh-stat-val">' + esc(m.value) + '</div>' +
+          '<div class="wh-stat-sub">' + esc(m.units || '') + '</div></div>'
+        )).join('');
+      } catch (e) { /* offline — leave last-known UI as is */ }
+    }
+    loadAppleHealth();
+    setInterval(loadAppleHealth, 5 * 60 * 1000);
+    const ahBtn = document.getElementById('ahRefresh');
+    if (ahBtn) ahBtn.addEventListener('click', function () {
+      ahBtn.classList.add('spin');
+      loadAppleHealth().finally(function () { setTimeout(function () { ahBtn.classList.remove('spin'); }, 400); });
+    });
+  })();
+  </script>
+
   <script>
   (function () {
     const KEY = 'whoop_tokens_v1';

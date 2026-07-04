@@ -98,7 +98,35 @@ Replace the old URL/key in these files:
 
 ---
 
-## 4. Nova (AI mentor / gym coach) — optional
+## 4. Apple Health / Apple Watch (optional)
+
+Apple doesn't offer a cloud API for Health data (it lives on your phone by design), so this
+works the opposite way from WHOOP: instead of the dashboard pulling from Apple, your phone
+**pushes** to the dashboard on a schedule.
+
+1. Install **Health Auto Export – JSON+CSV** from the App Store (free tier works fine).
+2. In Vercel → **Settings → Environment Variables**, add one secret and redeploy:
+
+| Variable | Value |
+|---|---|
+| `APPLE_HEALTH_SECRET` | any random string you make up, e.g. `openssl rand -hex 16` |
+
+3. In the app: **Automations → + → REST API**.
+   - **URL**: `https://your-app.vercel.app/api/apple-health?secret=YOUR_APPLE_HEALTH_SECRET`
+   - **Method**: `POST`, **Body format**: `JSON`
+   - Turn on whichever metrics you want (steps, resting heart rate, HRV, sleep, VO2 max,
+     active energy, blood oxygen, weight, ...). Anything you enable shows up on the Health
+     page automatically — nothing in the code needs to change per metric.
+   - Set the automation to run on a schedule (e.g. daily, or whenever the Health app updates).
+4. Run the automation once manually to test, then check the **Health** page — the Apple
+   Health card fills in once the first payload lands in Supabase.
+
+> This reuses the same `app_state` table as everything else (row key `apple_health`), so no
+> extra Supabase setup is needed beyond the SQL in step 2 above.
+
+---
+
+## 5. Nova (AI mentor / gym coach) — optional
 
 No setup or key in the repo. Each user **pastes their own Anthropic API key** on the
 **Nova** tile; it's stored only in their browser and sent straight to Anthropic. Get a key at
