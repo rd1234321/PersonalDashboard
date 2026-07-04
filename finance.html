@@ -1189,7 +1189,7 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .positions-table {
   width: 100%; border-collapse: collapse;
   font-family: var(--font-mono); font-size: 12px;
-  min-width: 520px;
+  min-width: 620px;
 }
 .positions-table th {
   text-align: right; font-size: 10px; font-weight: 700;
@@ -1690,7 +1690,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <table class="positions-table">
     <thead>
       <tr>
-        <th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>P/L%</th><th>Range</th>
+        <th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Value</th><th>P/L%</th><th title="Where the current price sits between what you paid and now — dim dot = entry price, bright glowing dot = current price">Range ⓘ</th>
       </tr>
     </thead>
     <tbody id="positionsTableBody"></tbody>
@@ -3303,11 +3303,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const color = up ? '#4dd6a8' : '#e0605c';
     const entryPct = pct(entry), curPct = pct(current);
     const fillLeft = Math.min(entryPct, curPct), fillWidth = Math.abs(curPct - entryPct);
+    const tip = 'Entry $' + fmtNum(entry) + ' → Current $' + fmtNum(current);
     return (
-      '<div class="pf-range-track" style="color:' + color + '">' +
+      '<div class="pf-range-track" style="color:' + color + '" title="' + tip + '">' +
         '<div class="pf-range-fill" style="left:' + fillLeft + '%;width:' + fillWidth + '%"></div>' +
-        '<div class="pf-range-dot" style="left:' + entryPct + '%;opacity:0.5"></div>' +
-        '<div class="pf-range-dot" style="left:' + curPct + '%"></div>' +
+        '<div class="pf-range-dot" style="left:' + entryPct + '%;opacity:0.5" title="Entry price: $' + fmtNum(entry) + '"></div>' +
+        '<div class="pf-range-dot" style="left:' + curPct + '%" title="Current price: $' + fmtNum(current) + '"></div>' +
       '</div>'
     );
   }
@@ -3335,7 +3336,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     }
     return (
       '<tr class="pf-detail-row" data-detail-for="' + escapeHtmlPf(symbol) + '">' +
-        '<td colspan="6"><div class="pf-detail-inner">' + body + '</div></td>' +
+        '<td colspan="7"><div class="pf-detail-inner">' + body + '</div></td>' +
       '</tr>'
     );
   }
@@ -3358,12 +3359,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           '<span class="pf-price-src-dot"></span>' + (isLive ? 'live' : 'cached') +
         '</span>'
       );
+      const value = (typeof pos.qty === 'number' && typeof pos.current_price === 'number') ? pos.qty * pos.current_price : null;
       const row = (
         '<tr class="pf-pos-row" data-symbol="' + escapeHtmlPf(pos.symbol) + '">' +
           '<td>' + escapeHtmlPf(pos.symbol) + '<span class="pf-expand-hint">chart ›</span></td>' +
           '<td>' + fmtNum(pos.qty) + '</td>' +
           '<td>' + fmtNum(pos.entry_price) + '</td>' +
           '<td>' + fmtNum(pos.current_price) + ' ' + priceSourceDot + '</td>' +
+          '<td>' + (value == null ? '—' : fmtUsd(value)) + '</td>' +
           '<td class="' + pnlClass + '">' + pnlText + '</td>' +
           '<td class="pf-range-cell">' + rangeBarHTML(pos.entry_price, pos.current_price) + '</td>' +
         '</tr>'
