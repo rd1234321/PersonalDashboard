@@ -1073,95 +1073,56 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .wish-row-bar-fill.flat { background: rgba(255,255,255,0.20); }
 
 /* ============================================================
-   FINANCE TICKER — rotating Nasdaq-style subscription renewal
-   header at the very top of the finances section.
+   PORTFOLIO BRIEFING — ticker + teaser tile at the top of Finance,
+   fed by api/portfolio.js's 'portfolio_summary' row. Hidden until
+   a snapshot has synced; see index.html for the sibling copy of
+   this same read (kept in sync manually since each page is static).
    ============================================================ */
-.finance-ticker {
-  display: flex; align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  margin-bottom: 18px;
-  background: rgba(77,214,168,0.05);
-  border: 1px solid rgba(77,214,168,0.14);
-  border-radius: 0;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  overflow: hidden;
+.briefing-ticker {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 14px; padding: 9px 14px;
+  background: rgba(63,217,255,0.03);
+  border: 1px solid rgba(63,217,255,0.10);
+  font-family: var(--font-mono); font-size: 12px;
+}
+.briefing-ticker[hidden] { display: none; }
+.briefing-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: #4dd6a8;
+}
+.briefing-seg { font-weight: 700; letter-spacing: 0.04em; color: var(--text-secondary); }
+.briefing-seg.pos { color: #4dd6a8; }
+.briefing-seg.neg { color: #e0605c; }
+
+.portfolio-teaser {
   position: relative;
-  min-height: 38px;
-  transition: background 0.4s, border-color 0.4s;
+  background: rgba(63,217,255,0.03);
+  padding: 16px 18px 14px;
+  margin: 0 0 18px;
 }
-.finance-ticker.hidden { display: none; }
-.finance-ticker.urgent {
-  background: rgba(224,96,92,0.07);
-  border-color: rgba(224,96,92,0.30);
-  animation: tickerPulse 1.2s ease-in-out infinite;
+.portfolio-teaser[hidden] { display: none; }
+.portfolio-teaser::before, .portfolio-teaser::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
 }
-@keyframes tickerPulse {
-  0%, 100% { border-color: rgba(224,96,92,0.30); }
-  50%      { border-color: rgba(224,96,92,0.85); }
+.portfolio-teaser::before { top: 0; left: 0; border-top: 1px solid #3fd9ff; border-left: 1px solid #3fd9ff; }
+.portfolio-teaser::after  { bottom: 0; right: 0; border-bottom: 1px solid #3fd9ff; border-right: 1px solid #3fd9ff; }
+.portfolio-teaser-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.portfolio-teaser-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; color: var(--text-tertiary);
 }
-.ticker-tag {
-  font-size: 9.5px; letter-spacing: 0.18em; font-weight: 800;
-  color: var(--text-tertiary);
-  padding: 3px 8px;
-  background: rgba(0,0,0,0.30);
-  border-radius: 0;
-  flex-shrink: 0;
+.portfolio-teaser-change { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+.portfolio-teaser-change.pos { color: #4dd6a8; }
+.portfolio-teaser-change.neg { color: #e0605c; }
+.portfolio-teaser-value {
+  font-size: 30px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--text-primary); font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
 }
-.finance-ticker.urgent .ticker-tag { color: #e0605c; background: rgba(224,96,92,0.10); }
-.ticker-stream {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  overflow: hidden;
-  height: 18px;
+.portfolio-teaser-foot {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
 }
-.ticker-item {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; gap: 12px;
-  white-space: nowrap;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.35s, transform 0.35s;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-}
-.ticker-item.active {
-  opacity: 1;
-  transform: translateY(0);
-}
-.ticker-item-name {
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 0.04em;
-  }
-.ticker-item-amt {
-  font-weight: 700;
-  color: #4dd6a8;
-}
-.finance-ticker.urgent .ticker-item-amt { color: #e0605c; }
-.ticker-item-days {
-  color: var(--text-tertiary);
-  letter-spacing: 0.06em;
-    font-size: 11px;
-}
-.finance-ticker.urgent .ticker-item-days {
-  color: #e0605c;
-  font-weight: 700;
-}
-.ticker-dots {
-  display: flex; gap: 4px;
-  flex-shrink: 0;
-}
-.ticker-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.18);
-  transition: background 0.2s;
-}
-.ticker-dot.active { background: #4dd6a8; }
-.finance-ticker.urgent .ticker-dot.active { background: #e0605c; }
 
 /* ============================================================
    DEDUCT-FROM-NW BUTTON & CHOOSER (in order cards)
@@ -1570,11 +1531,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <span class="hud-status"><span class="hud-status-dot"></span><span>system online</span></span>
 </div>
 
-<!-- ===== FINANCE TICKER (rotating subscription renewals) ===== -->
-<div class="finance-ticker hidden" id="financeTicker">
-  <span class="ticker-tag" id="tickerTag">RENEWS</span>
-  <div class="ticker-stream" id="tickerStream"></div>
-  <div class="ticker-dots" id="tickerDots"></div>
+<!-- ===== PORTFOLIO BRIEFING (ticker + teaser, hidden until synced) ===== -->
+<div class="briefing-ticker" id="briefingTicker" hidden>
+  <span class="briefing-dot"></span>
+  <span class="briefing-seg" id="briefingPortfolioSeg"></span>
+</div>
+
+<div class="portfolio-teaser" id="portfolioTeaser" hidden>
+  <div class="portfolio-teaser-top">
+    <span class="portfolio-teaser-label">PORTFOLIO</span>
+    <span class="portfolio-teaser-change" id="portfolioTeaserChange"></span>
+  </div>
+  <div class="portfolio-teaser-value" id="portfolioTeaserValue">$0</div>
+  <div class="portfolio-teaser-foot">
+    <span id="portfolioTeaserPositions">0 positions</span>
+    <span id="portfolioTeaserAlerts"></span>
+  </div>
 </div>
 
 <!-- ===== NET WORTH ===== -->
@@ -3277,111 +3249,71 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     }
     return d;
   }
-  function buildTickerEntries() {
-    const subs = storeGet('subs') || [];
-    const out = [];
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    subs.forEach(s => {
-      if (!s.renewal) return;
-      const next = nextRenewalDate(s.renewal, s.period);
-      if (!next) return;
-      const days = Math.round((next.getTime() - today) / 86400000);
-      // Use the period-local cost for what the user actually pays at renewal,
-      // not the monthlyEquivalent — this ticker shows "what's about to hit".
-      out.push({
-        name: s.name,
-        amount: Number(s.amount) || 0,
-        days,
-        period: s.period
-      });
-    });
-    out.sort((a, b) => a.days - b.days);
-    return out;
-  }
-  let tickerIdx = 0;
-  let tickerTimer = null;
-  let tickerLastSig = '';   // signature of last-painted entries — skip re-paint if unchanged
-  let tickerLastEntries = [];
-  function tickerSig(entries) {
-    return entries.map(e => e.name + '|' + e.amount + '|' + e.days + '|' + (e.period || '')).join('~');
-  }
-  function paintTickerActive(wrap, stream, dots, entries) {
-    if (tickerIdx >= entries.length) tickerIdx = 0;
-    const items = stream.querySelectorAll('.ticker-item');
-    const dotEls = dots.querySelectorAll('.ticker-dot');
-    items.forEach((el, i) => el.classList.toggle('active', i === tickerIdx));
-    dotEls.forEach((el, i) => el.classList.toggle('active', i === tickerIdx));
-    const cur = entries[tickerIdx];
-    wrap.classList.toggle('urgent', !!(cur && cur.days <= 5));
-  }
-  function renderTicker() {
-    const wrap   = document.getElementById('financeTicker');
-    const stream = document.getElementById('tickerStream');
-    const dots   = document.getElementById('tickerDots');
-    if (!wrap || !stream || !dots) return;
-    const entries = buildTickerEntries();
-    const sig = tickerSig(entries);
-    // Fast path: nothing changed — don't repaint, don't disturb rotation.
-    if (sig === tickerLastSig) {
-      // Refresh urgent state in case the active item ticked closer (days didn't change but it's nice to keep in sync)
-      if (entries.length) paintTickerActive(wrap, stream, dots, entries);
-      return;
-    }
-    tickerLastSig = sig;
-    tickerLastEntries = entries;
-    if (!entries.length) {
-      wrap.classList.add('hidden');
-      stream.innerHTML = '';
-      dots.innerHTML = '';
-      if (tickerTimer) { clearInterval(tickerTimer); tickerTimer = null; }
-      return;
-    }
-    wrap.classList.remove('hidden');
-    if (tickerIdx >= entries.length) tickerIdx = 0;
+})();
+</script>
 
-    // Paint the items as overlapping absolute layers; .active is the visible one
-    stream.innerHTML = entries.map((e, i) => {
-      const daysLabel = e.days < 0
-        ? Math.abs(e.days) + 'd late'
-        : e.days === 0
-          ? 'TODAY'
-          : e.days === 1
-            ? 'TOMORROW'
-            : 'in ' + e.days + 'd';
-      return '<div class="ticker-item' + (i === tickerIdx ? ' active' : '') + '" data-i="' + i + '">'
-        +   '<span class="ticker-item-name">' + escapeHtml(e.name) + '</span>'
-        +   '<span class="ticker-item-amt">' + fmtMoney(e.amount) + '</span>'
-        +   '<span class="ticker-item-days">' + daysLabel + '</span>'
-        + '</div>';
-    }).join('');
-    dots.innerHTML = entries.map((_, i) =>
-      '<span class="ticker-dot' + (i === tickerIdx ? ' active' : '') + '"></span>'
-    ).join('');
-    paintTickerActive(wrap, stream, dots, entries);
+<!-- ============================================================
+     Portfolio briefing — reads the 'portfolio_summary' row the same
+     way health.html reads 'apple_health' (see api/portfolio.js).
+     Stays hidden if nothing's synced yet or the read fails; no error
+     state is ever shown to the user.
+     ============================================================ -->
+<script>
+(function () {
+  const PF_SUPABASE_URL = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+  const PF_SUPABASE_KEY = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
 
-    if (tickerTimer) { clearInterval(tickerTimer); tickerTimer = null; }
-    if (entries.length > 1) {
-      tickerTimer = setInterval(() => {
-        if (!tickerLastEntries.length) return;
-        tickerIdx = (tickerIdx + 1) % tickerLastEntries.length;
-        const w = document.getElementById('financeTicker');
-        const s = document.getElementById('tickerStream');
-        const d = document.getElementById('tickerDots');
-        if (w && s && d) paintTickerActive(w, s, d, tickerLastEntries);
-      }, 5000);
-    }
+  function fmtUsd(n) {
+    if (n == null || isNaN(n)) return '$0';
+    return '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
   }
-  // Drive the ticker on a 1s heartbeat — bulletproof and avoids any
-  // fragile wrapping of renderSubs (which broke the add buttons before).
-  // The actual swap is gated by tickerTimer's own 5s interval inside
-  // renderTicker; this loop just keeps the data fresh whenever subs change.
-  function safeRenderTicker() {
-    try { renderTicker(); } catch (e) { console.error('ticker render failed', e); }
+  function fmtPct(n) {
+    if (n == null || isNaN(n)) return '0%';
+    return (n > 0 ? '+' : '') + (Math.round(n * 100) / 100) + '%';
   }
-  safeRenderTicker();
-  setInterval(safeRenderTicker, 1500);
 
+  async function loadPortfolio() {
+    try {
+      if (!window.supabase) return;
+      const client = window.supabase.createClient(PF_SUPABASE_URL, PF_SUPABASE_KEY);
+      const { data, error } = await client.from('app_state').select('data').eq('key', 'portfolio_summary').maybeSingle();
+      if (error || !data || !data.data) return; // nothing synced yet — stay hidden, no error shown
+      const p = data.data;
+      if (p.day_change_pct == null && p.portfolio_value == null) return;
+
+      const pct = p.day_change_pct || 0;
+      const isPos = pct >= 0;
+
+      const ticker = document.getElementById('briefingTicker');
+      const seg = document.getElementById('briefingPortfolioSeg');
+      if (seg) {
+        seg.textContent = 'portfolio ' + fmtPct(pct) + ' today';
+        seg.classList.toggle('pos', isPos);
+        seg.classList.toggle('neg', !isPos);
+      }
+      if (ticker) ticker.hidden = false;
+
+      const teaser = document.getElementById('portfolioTeaser');
+      const change = document.getElementById('portfolioTeaserChange');
+      if (change) {
+        const usdSign = (p.day_change_usd || 0) >= 0 ? '+' : '-';
+        change.textContent = fmtPct(pct) + ' (' + usdSign + fmtUsd(Math.abs(p.day_change_usd || 0)) + ')';
+        change.classList.toggle('pos', isPos);
+        change.classList.toggle('neg', !isPos);
+      }
+      const valueEl = document.getElementById('portfolioTeaserValue');
+      if (valueEl) valueEl.textContent = fmtUsd(p.portfolio_value);
+      const posEl = document.getElementById('portfolioTeaserPositions');
+      if (posEl) posEl.textContent = (p.open_positions != null ? p.open_positions : 0) + ' positions';
+      const alertsEl = document.getElementById('portfolioTeaserAlerts');
+      if (alertsEl) {
+        alertsEl.textContent = p.alerts_count ? p.alerts_count + ' alert' + (p.alerts_count === 1 ? '' : 's') + (p.alerts_note ? ' · ' + p.alerts_note : '') : '';
+      }
+      if (teaser) teaser.hidden = false;
+    } catch (e) { /* offline or not set up yet — ticker/teaser just stay hidden */ }
+  }
+  loadPortfolio();
+  setInterval(loadPortfolio, 5 * 60 * 1000);
 })();
 </script>
 
