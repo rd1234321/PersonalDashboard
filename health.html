@@ -616,11 +616,13 @@ main {
     .ah-metric-days { font-size:9px; color:var(--text-tertiary); letter-spacing:0.08em; margin-top:2px; }
     .ah-bars rect:last-of-type { filter: drop-shadow(0 0 6px var(--ah-c, var(--hud-cyan))); }
 
-    /* ----- click-to-expand detail panel ----- */
+    /* ----- click-to-expand detail panel — a full-width row inserted right
+       after the card that was clicked, inside the same grid ----- */
+    .ah-detail-row { grid-column: 1 / -1; }
     .ah-detail {
       position: relative;
       background: rgba(63,217,255,0.05);
-      border: none; margin-top: 12px; padding: 18px 20px 20px;
+      border: none; padding: 18px 20px 20px;
       overflow: hidden;
       animation: hud-reveal 0.2s ease;
     }
@@ -671,7 +673,6 @@ main {
       <div id="ahVitals" class="ah-vitals"></div>
       <div id="ahHero"></div>
       <div id="ahGrid" class="ah-grid"></div>
-      <div id="ahDetail"></div>
     </div>
   </div>
   <script>
@@ -838,7 +839,7 @@ main {
       document.getElementById('ahVitals').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[i % AH_COLORS.length];
         const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
-        return (
+        const card = (
           '<div class="ah-vital" style="--ah-c:' + color + '" data-metric="' + esc(name) + '">' +
             '<div class="ah-vital-top"><span class="ah-vital-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
             '<div class="ah-vital-ring-row">' +
@@ -849,6 +850,7 @@ main {
             '</div>' +
           '</div>'
         );
+        return card + (ahOpenDetail === name ? detailPanelHTML(name, m, color) : '');
       }).join('');
     }
 
@@ -873,20 +875,20 @@ main {
     function renderGrid(entries, colorOffset) {
       document.getElementById('ahGrid').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
-        const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange) + 8);
-        return (
+        const card = (
           '<div class="ah-metric" style="--ah-c:' + color + '" data-metric="' + esc(name) + '">' +
             '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
             '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></span></div>' +
           '</div>'
         );
+        return card + (ahOpenDetail === name ? detailPanelHTML(name, m, color) : '');
       }).join('');
     }
 
-    // Renders the inline detail panel for one metric and wires up its close
-    // control. Reuses the same range (day/week/month) as the rest of the card.
-    function renderDetail(name, m, color) {
-      const detailEl = document.getElementById('ahDetail');
+    // Builds the toggle-open detail row for one metric — a full-width grid
+    // item so it drops in directly under the row containing the card that
+    // was clicked, rather than at the bottom of the whole card.
+    function detailPanelHTML(name, m, color) {
       const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange) + 8);
       let body;
       if (points.length >= 3) {
@@ -903,39 +905,38 @@ main {
       } else {
         body = '<div class="ah-detail-empty">Not enough history yet to chart ' + esc(m.label.toLowerCase()) + ' over time — this fills in as more syncs come in from your phone.</div>';
       }
-      detailEl.innerHTML = (
-        '<div class="ah-detail" style="--ah-c:' + color + '">' +
-          '<div class="ah-detail-head">' +
-            '<div><div class="ah-detail-title">' + esc(m.label) + ' — ' + rangeNoun(ahRange) + '</div>' +
-            '<span class="ah-detail-val">' + esc(m.value) + '</span><span class="ah-detail-units">' + esc(m.units || '') + '</span></div>' +
-            '<button type="button" class="ah-detail-close" id="ahDetailClose">‹ back</button>' +
+      return (
+        '<div class="ah-detail-row">' +
+          '<div class="ah-detail" style="--ah-c:' + color + '">' +
+            '<div class="ah-detail-head">' +
+              '<div><div class="ah-detail-title">' + esc(m.label) + ' — ' + rangeNoun(ahRange) + '</div>' +
+              '<span class="ah-detail-val">' + esc(m.value) + '</span><span class="ah-detail-units">' + esc(m.units || '') + '</span></div>' +
+              '<button type="button" class="ah-detail-close" data-metric="' + esc(name) + '">‹ back</button>' +
+            '</div>' +
+            body +
           '</div>' +
-          body +
         '</div>'
       );
-      document.getElementById('ahDetailClose').addEventListener('click', closeDetail);
-      detailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    function closeDetail() {
-      ahOpenDetail = null;
-      document.getElementById('ahDetail').innerHTML = '';
-    }
-
-    function openDetail(name) {
+    // Toggles the detail row for a metric open/closed in-place, right where
+    // it was clicked, and re-renders just the grid it lives in.
+    function toggleDetail(name) {
       if (!ahLastMetrics || !ahLastMetrics[name]) return;
-      if (ahOpenDetail === name) { closeDetail(); return; }
-      ahOpenDetail = name;
+      ahOpenDetail = ahOpenDetail === name ? null : name;
       const entries = Object.entries(ahLastMetrics).sort(metricOrder);
-      const idx = entries.findIndex(([n]) => n === name);
-      const color = AH_COLORS[Math.max(0, idx) % AH_COLORS.length];
-      renderDetail(name, ahLastMetrics[name], color);
+      const vitals = entries.slice(0, AH_VITAL_COUNT);
+      const rest = entries.filter((_, i) => i >= AH_VITAL_COUNT);
+      renderVitals(vitals);
+      renderGrid(rest, AH_VITAL_COUNT);
     }
 
     function renderMetrics(metrics) {
       ahLastMetrics = metrics;
       const entries = Object.entries(metrics).sort(metricOrder);
       if (!entries.length) return;
+      // If the metric whose detail was open no longer exists, close it.
+      if (ahOpenDetail && !metrics[ahOpenDetail]) ahOpenDetail = null;
       const vitals = entries.slice(0, AH_VITAL_COUNT);
       renderVitals(vitals);
       // Feature whichever priority metric actually has enough history to
@@ -946,23 +947,19 @@ main {
       renderHero(heroName, heroM, AH_COLORS[heroIdx % AH_COLORS.length]);
       const rest = entries.filter((_, i) => i >= AH_VITAL_COUNT);
       renderGrid(rest, AH_VITAL_COUNT);
-      // Re-open whatever detail panel was showing (e.g. after a range switch
-      // or a refresh) so it doesn't silently vanish under the user.
-      if (ahOpenDetail && metrics[ahOpenDetail]) {
-        const idx = entries.findIndex(([n]) => n === ahOpenDetail);
-        renderDetail(ahOpenDetail, metrics[ahOpenDetail], AH_COLORS[Math.max(0, idx) % AH_COLORS.length]);
-      } else {
-        closeDetail();
-      }
     }
 
     document.getElementById('ahVitals').addEventListener('click', e => {
+      const closeBtn = e.target.closest('.ah-detail-close');
+      if (closeBtn) { toggleDetail(closeBtn.dataset.metric); return; }
       const card = e.target.closest('.ah-vital');
-      if (card) openDetail(card.dataset.metric);
+      if (card) toggleDetail(card.dataset.metric);
     });
     document.getElementById('ahGrid').addEventListener('click', e => {
+      const closeBtn = e.target.closest('.ah-detail-close');
+      if (closeBtn) { toggleDetail(closeBtn.dataset.metric); return; }
       const card = e.target.closest('.ah-metric');
-      if (card) openDetail(card.dataset.metric);
+      if (card) toggleDetail(card.dataset.metric);
     });
 
     const ahRangeSeg = document.getElementById('ahRangeSeg');
