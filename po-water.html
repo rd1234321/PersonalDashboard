@@ -203,6 +203,7 @@ html, body {
 .water-actions {
   display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: stretch;
 }
+.water-actions[hidden] { display: none; }
 .water-minus-btn {
   background: rgba(63,217,255,0.06);
   border: 1px solid var(--border); border-radius: 0;
@@ -499,6 +500,7 @@ html, body {
   display: grid; grid-template-columns: 1fr 74px 64px 64px 64px auto;
   gap: 6px; align-items: center; margin-top: 4px;
 }
+.nutri-add-row[hidden] { display: none; }
 .nutri-input {
   font-size: 13px; padding: 9px 10px; border-radius: 0;
   border: 1px solid var(--border); background: rgba(0,0,0,0.28);
@@ -529,6 +531,19 @@ html, body {
 .nutri-log-del:hover { color: var(--bad); }
 .nutri-log-empty { font-size: 12px; color: var(--text-4); font-style: italic; padding: 6px 0; }
 
+.ah-sync-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--good); background: rgba(77,214,168,0.10);
+  border: 1px solid rgba(77,214,168,0.30);
+  padding: 4px 9px; margin-bottom: 12px;
+}
+.ah-sync-badge[hidden] { display: none; }
+.nutri-synced-note {
+  font-size: 11px; color: var(--text-3); font-style: italic;
+  margin-top: 8px; line-height: 1.5;
+}
+
 @media (max-width: 560px) {
   .nutri-add-row { grid-template-columns: 1fr 1fr; }
   .nutri-add-row .nutri-add-btn { grid-column: 1 / -1; }
@@ -553,6 +568,7 @@ html, body {
   <div class="divider"><span>NUTRITION</span></div>
 
   <div class="card">
+    <div class="ah-sync-badge" id="nutriSyncBadge" hidden>🍎 Synced from Apple Health · <span id="nutriSyncWhen">just now</span></div>
     <div class="water-label">CALORIES TODAY</div>
     <div class="water-row" style="margin-bottom:0">
       <span class="water-num" id="nutriCalNum">0</span>
@@ -579,7 +595,7 @@ html, body {
       </div>
     </div>
 
-    <div class="nutri-add-row">
+    <div class="nutri-add-row" id="nutriAddRow">
       <input class="nutri-input" id="nutriAddName" type="text" placeholder="Food (e.g. Chicken breast)" autocomplete="off" />
       <input class="nutri-input" id="nutriAddCal" type="number" min="0" placeholder="kcal" />
       <input class="nutri-input" id="nutriAddProtein" type="number" min="0" placeholder="P g" />
@@ -587,6 +603,7 @@ html, body {
       <input class="nutri-input" id="nutriAddFat" type="number" min="0" placeholder="F g" />
       <button class="nutri-add-btn" id="nutriAddBtn" type="button">+ Add</button>
     </div>
+    <div class="nutri-synced-note" id="nutriSyncedNote" hidden>Logged via MyNetDiary → Apple Health. Manual entry is hidden while synced data exists for today.</div>
 
     <div class="nutri-log-list" id="nutriLogList"></div>
   </div>
@@ -594,6 +611,7 @@ html, body {
   <div class="divider"><span>WATER</span></div>
 
   <div class="card">
+    <div class="ah-sync-badge" id="waterSyncBadge" hidden>🍎 Synced from Apple Health · <span id="waterSyncWhen">just now</span></div>
     <div class="water-label" id="waterUnitLabel">BOTTLES DRANK TODAY</div>
     <div class="water-hero-row">
       <div class="hud-ring-wrap" style="width:104px;height:104px;flex-shrink:0">
@@ -626,7 +644,7 @@ html, body {
       </div>
     </div>
 
-    <div class="water-actions">
+    <div class="water-actions" id="waterActions">
       <button class="water-minus-btn" id="waterMinusBtn" type="button" aria-label="Undo last">−</button>
       <button class="water-plus-btn" id="waterPlusBtn" type="button">
         <span id="waterPlusLabel">Drank a bottle</span>
@@ -869,7 +887,13 @@ html, body {
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
   function todayKey() { return dateKey(new Date()); }
-  function todayCount() { return state.logs[todayKey()] || 0; }
+  // When today's water is synced in from Apple Health (MyNetDiary, etc. —
+  // see the sync block near the end of the file), that becomes the source
+  // of truth for "today" instead of manual +/- taps.
+  function todayCount() {
+    if (window.__ahSyncedWaterMl != null) return window.__ahSyncedWaterMl / unitVolMl();
+    return state.logs[todayKey()] || 0;
+  }
   function setTodayCount(n) {
     const k = todayKey();
     if (n <= 0) delete state.logs[k];
@@ -942,7 +966,7 @@ html, body {
     const unitName = unitLabelPlural();
 
     $('waterUnitLabel').textContent = unitName.toUpperCase() + ' DRANK TODAY';
-    $('waterNum').textContent = count;
+    $('waterNum').textContent = Number.isInteger(count) ? count : (Math.round(count * 10) / 10);
     $('waterTarget').textContent = '/ ' + targetUnits;
     $('waterPlusLabel').textContent = 'Drank a ' + unitLabelSingular();
 
@@ -1250,6 +1274,7 @@ html, body {
 
   // BOOT
   renderAll();
+  window.__renderWater = renderWater; // hook for the Apple Health sync block below
 })();
 </script>
 
@@ -1283,12 +1308,17 @@ html, body {
   }
 
   function renderNutrition() {
+    const synced = window.__ahSyncedNutrition; // set by the Apple Health sync block below, if today's data exists
     const entries = todayEntries();
-    const totals = entries.reduce((acc, e) => {
+    const totals = synced || entries.reduce((acc, e) => {
       acc.cal += e.cal || 0; acc.protein += e.protein || 0; acc.carbs += e.carbs || 0; acc.fat += e.fat || 0;
       return acc;
     }, { cal: 0, protein: 0, carbs: 0, fat: 0 });
     const g = nState.goals;
+
+    $('nutriSyncBadge').hidden = !synced;
+    $('nutriAddRow').hidden = !!synced;
+    $('nutriSyncedNote').hidden = !synced;
 
     $('nutriCalNum').textContent = Math.round(totals.cal).toLocaleString();
     $('nutriCalTarget').textContent = '/ ' + g.calories.toLocaleString();
@@ -1306,7 +1336,9 @@ html, body {
     macro('fat', 'Fat');
 
     const listEl = $('nutriLogList');
-    if (!entries.length) {
+    if (synced) {
+      listEl.innerHTML = '';
+    } else if (!entries.length) {
       listEl.innerHTML = '<div class="nutri-log-empty">No food logged yet today.</div>';
     } else {
       listEl.innerHTML = entries.map(e => (
@@ -1365,6 +1397,7 @@ html, body {
   window.addEventListener('storage', () => { nState = loadNutri(); renderNutrition(); });
 
   renderNutrition();
+  window.__renderNutrition = renderNutrition; // hook for the Apple Health sync block below
 })();
 </script>
 
@@ -1403,6 +1436,91 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 });
+</script>
+
+<!-- ============================================================
+     Pull today's nutrition + water straight from Apple Health (the
+     same 'apple_health' row api/apple-health.js writes to), so if
+     you log food/water in MyNetDiary (or MyFitnessPal, Cronometer,
+     etc.) and it syncs to Apple Health, it shows up here too — no
+     direct integration with any of those apps exists or is needed.
+     Manual entry above still works on days nothing has synced yet.
+     ============================================================ -->
+<script>
+(function () {
+  const AH_SUPABASE_URL = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+  const AH_SUPABASE_KEY = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function relTime(iso) {
+    if (!iso) return 'just now';
+    const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + ' min ago';
+    if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+    return Math.floor(s / 86400) + ' d ago';
+  }
+  // HealthKit stores volume as a real quantity; Health Auto Export exports
+  // it in whichever unit string it reports. Only convert units we can be
+  // sure about — anything unrecognized is shown as-is rather than guessed.
+  function toMl(value, units) {
+    const u = String(units || '').toLowerCase().replace(/\s+/g, '');
+    if (u === 'ml' || u === 'millilitre' || u === 'millilitres') return value;
+    if (u === 'l' || u === 'liter' || u === 'liters' || u === 'litre' || u === 'litres') return value * 1000;
+    if (u.includes('floz') || u.includes('fl_oz')) return value * 29.5735;
+    if (u === 'cup' || u === 'cups') return value * 236.588;
+    return null;
+  }
+
+  async function syncFromAppleHealth() {
+    if (!window.supabase) return;
+    try {
+      const client = window.supabase.createClient(AH_SUPABASE_URL, AH_SUPABASE_KEY);
+      const { data, error } = await client.from('app_state').select('data').eq('key', 'apple_health').maybeSingle();
+      if (error || !data || !data.data || !data.data.metrics) return;
+      const metrics = data.data.metrics;
+      const updatedAt = data.data.updatedAt;
+      const today = todayKey();
+
+      const cal = metrics.dietary_energy;
+      const protein = metrics.protein;
+      const carbs = metrics.carbohydrates;
+      const fat = metrics.total_fat;
+      if (cal && cal.date === today) {
+        window.__ahSyncedNutrition = {
+          cal: cal.value || 0,
+          protein: (protein && protein.date === today) ? protein.value : 0,
+          carbs: (carbs && carbs.date === today) ? carbs.value : 0,
+          fat: (fat && fat.date === today) ? fat.value : 0,
+        };
+        const badge = document.getElementById('nutriSyncWhen');
+        if (badge) badge.textContent = relTime(updatedAt);
+        if (window.__renderNutrition) window.__renderNutrition();
+      }
+
+      const water = metrics.dietary_water;
+      if (water && water.date === today) {
+        const ml = toMl(water.value, water.units);
+        if (ml != null) {
+          window.__ahSyncedWaterMl = ml;
+          const badge = document.getElementById('waterSyncBadge');
+          const when = document.getElementById('waterSyncWhen');
+          const actions = document.getElementById('waterActions');
+          if (when) when.textContent = relTime(updatedAt);
+          if (badge) badge.hidden = false;
+          if (actions) actions.hidden = true;
+          if (window.__renderWater) window.__renderWater();
+        }
+      }
+    } catch (e) { /* offline or not set up yet — manual tracking still works */ }
+  }
+
+  syncFromAppleHealth();
+  setInterval(syncFromAppleHealth, 5 * 60 * 1000);
+})();
 </script>
 
 </body>

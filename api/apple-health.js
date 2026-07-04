@@ -44,6 +44,18 @@ const FRIENDLY = {
   sleep_analysis: 'Sleep',
   blood_oxygen_saturation: 'Blood Oxygen',
   flights_climbed: 'Flights Climbed',
+  // Nutrition + water — these come from whatever food-logging app
+  // (MyNetDiary, MyFitnessPal, Cronometer, ...) writes into Apple
+  // Health, not from a direct integration with any of them.
+  dietary_energy: 'Calories',
+  protein: 'Protein',
+  carbohydrates: 'Carbohydrates',
+  total_fat: 'Fat',
+  saturated_fat: 'Saturated Fat',
+  dietary_sugar: 'Sugar',
+  dietary_fiber: 'Fiber',
+  dietary_sodium: 'Sodium',
+  dietary_water: 'Water',
 };
 
 // Health Auto Export's per-point shape varies by metric type — pull
@@ -72,6 +84,8 @@ const SUM_METRICS = new Set([
   'apple_exercise_time', 'apple_stand_time', 'apple_stand_hour',
   'distance_walking_running', 'distance_cycling', 'distance_swimming',
   'swimming_stroke_count', 'push_count', 'dietary_energy', 'water',
+  'protein', 'carbohydrates', 'total_fat', 'saturated_fat',
+  'dietary_sugar', 'dietary_fiber', 'dietary_sodium', 'dietary_water',
 ]);
 
 function dayKey(dateStr) {
