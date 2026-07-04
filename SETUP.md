@@ -117,7 +117,42 @@ works the opposite way from WHOOP: instead of the dashboard pulling from Apple, 
 
 ---
 
-## 4. Nova (AI mentor / gym coach) — optional
+## 4. Portfolio snapshot (optional)
+
+Same pattern as Apple Health: instead of the dashboard polling a brokerage API, something you
+control (a broker's automation, a scheduled script, a Shortcut, ...) **pushes** the latest
+snapshot to the dashboard whenever it runs.
+
+1. In Vercel → **Settings → Environment Variables**, add one secret and redeploy:
+
+| Variable | Value |
+|---|---|
+| `PORTFOLIO_SECRET` | any random string you make up, e.g. `openssl rand -hex 16` — **server-only, never expose this** |
+
+2. POST a JSON body to `https://your-app.vercel.app/api/portfolio?secret=YOUR_PORTFOLIO_SECRET`:
+   ```json
+   {
+     "portfolio_value": 128450.32,
+     "day_change_pct": 1.24,
+     "day_change_usd": 1573.10,
+     "open_positions": 14,
+     "alerts_count": 0,
+     "alerts_note": null,
+     "synced_at": "2026-07-04T13:00:00Z"
+   }
+   ```
+   Only the most recent snapshot is kept (no history) — each POST replaces the last one, and a
+   partial payload merges over whatever fields were already there.
+3. Once a snapshot lands, a "portfolio ±X% today" segment appears in the main page's ticker and
+   a small teaser tile fills in — both stay hidden until the first snapshot arrives, and hide
+   again gracefully if a later read ever fails.
+
+> This reuses the same `app_state` table as everything else (row key `portfolio_summary`), so no
+> extra Supabase setup is needed beyond the SQL in step 2 above.
+
+---
+
+## 5. Nova (AI mentor / gym coach) — optional
 
 No setup or key in the repo. Each user **pastes their own Anthropic API key** on the
 **Nova** tile; it's stored only in their browser and sent straight to Anthropic. Get a key at
@@ -131,7 +166,8 @@ console.anthropic.com.
    `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, and `DASHBOARD_PASSWORD` in Vercel → redeploy.
 3. (Optional) Apple Health: install Health Auto Export on your phone, add `APPLE_HEALTH_SECRET`
    in Vercel, point its REST API automation at `/api/apple-health`.
-4. Open the site, log in with `DASHBOARD_PASSWORD`. Done.
+4. (Optional) Portfolio: add `PORTFOLIO_SECRET` in Vercel, POST snapshots to `/api/portfolio`.
+5. Open the site, log in with `DASHBOARD_PASSWORD`. Done.
 
 ## Upgrading an existing deployment
 If you had this dashboard running before this version, your data isn't lost — it's still sitting
