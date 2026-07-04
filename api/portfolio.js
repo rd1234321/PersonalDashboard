@@ -25,6 +25,10 @@
 //     ]
 //   }
 //
+// Each position's current_price is also appended to a per-symbol
+// day-bucketed positions_history (dropped for symbols no longer in the
+// latest positions array), so each row can get its own real trend chart.
+//
 // Like the rest of this row, `positions` is read back out only through
 // /api/data-get.js's session-gated proxy — never via a direct anon-key
 // Supabase query — since app_state has no RLS policy for anon at all.
@@ -113,6 +117,30 @@ export default async function handler(req, res) {
       .slice(-60);
   }
 
+  // Same day-bucketed history, but per symbol (current_price each sync) so
+  // each position can get its own real trend chart. Only kept for symbols
+  // present in the latest positions payload — a closed/removed position's
+  // history isn't carried forward indefinitely.
+  const priorPositionsHistory = (existing.positions_history && typeof existing.positions_history === 'object')
+    ? existing.positions_history : {};
+  let positionsHistory = priorPositionsHistory;
+  if (incomingPositions && incomingPositions.length) {
+    positionsHistory = {};
+    for (const pos of incomingPositions) {
+      if (typeof pos.current_price !== 'number') {
+        if (priorPositionsHistory[pos.symbol]) positionsHistory[pos.symbol] = priorPositionsHistory[pos.symbol];
+        continue;
+      }
+      const prior = Array.isArray(priorPositionsHistory[pos.symbol]) ? priorPositionsHistory[pos.symbol] : [];
+      const byDay = new Map(prior.map(p => [p.date, p.value]));
+      byDay.set(today, pos.current_price);
+      positionsHistory[pos.symbol] = Array.from(byDay.entries())
+        .map(([date, value]) => ({ date, value }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-60);
+    }
+  }
+
   const payload = {
     portfolio_value: portfolioValue,
     day_change_pct: body.day_change_pct != null ? body.day_change_pct : existing.day_change_pct,
@@ -123,6 +151,7 @@ export default async function handler(req, res) {
     synced_at: body.synced_at || new Date().toISOString(),
     positions: incomingPositions != null ? incomingPositions : (existing.positions || undefined),
     value_history: valueHistory,
+    positions_history: positionsHistory,
   };
   if (payload.positions === undefined) delete payload.positions;
 

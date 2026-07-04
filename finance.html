@@ -1227,6 +1227,26 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   filter: drop-shadow(0 0 4px currentColor);
 }
 
+/* ----- click-to-expand per-position chart ----- */
+.pf-pos-row { cursor: pointer; transition: background 0.15s; }
+.pf-expand-hint {
+  margin-left: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  color: #2a5560; transition: color 0.15s;
+}
+.pf-pos-row:hover .pf-expand-hint { color: #3fd9ff; }
+.pf-detail-row td { padding: 0; border-bottom: 1px solid rgba(63,217,255,0.05); }
+.pf-detail-inner {
+  padding: 14px 16px 16px;
+  background: rgba(63,217,255,0.025);
+  animation: hud-reveal 0.2s ease;
+}
+.pf-detail-chart { margin-bottom: 10px; }
+.pf-detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pf-detail-stat { background: rgba(63,217,255,0.03); padding: 8px 10px; text-align: center; }
+.pf-detail-stat-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 3px; }
+.pf-detail-stat-val { font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+@keyframes hud-reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
 /* ============================================================
    DEDUCT-FROM-NW BUTTON & CHOOSER (in order cards)
    ============================================================ */
@@ -3242,8 +3262,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   const PF_SUPABASE_KEY = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
 
   function fmtUsd(n) {
-    if (n == null || isNaN(n)) return '$0';
-    return '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (n == null || isNaN(n)) return '$0.00';
+    return '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function fmtPct(n) {
     if (n == null || isNaN(n)) return '0%';
@@ -3280,18 +3300,48 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     );
   }
 
+  let pfPositionsHistory = {};
+  let pfOpenSymbol = null;
+
+  function pfDetailRowHTML(symbol, color) {
+    const history = pfPositionsHistory[symbol];
+    let body;
+    if (Array.isArray(history) && history.length >= 3) {
+      const vals = history.map(p => p.value);
+      const min = Math.min(...vals), max = Math.max(...vals);
+      const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+      body = (
+        '<div class="pf-detail-chart">' + pfChartSVG(history, color, 640, 120) + '</div>' +
+        '<div class="pf-detail-stats">' +
+          '<div class="pf-detail-stat"><div class="pf-detail-stat-label">MIN</div><div class="pf-detail-stat-val">' + fmtNum(min) + '</div></div>' +
+          '<div class="pf-detail-stat"><div class="pf-detail-stat-label">AVG</div><div class="pf-detail-stat-val">' + fmtNum(avg) + '</div></div>' +
+          '<div class="pf-detail-stat"><div class="pf-detail-stat-label">MAX</div><div class="pf-detail-stat-val">' + fmtNum(max) + '</div></div>' +
+        '</div>'
+      );
+    } else {
+      body = '<div class="pf-chart-empty">Not enough synced history yet to chart ' + escapeHtmlPf(symbol) + ' — this fills in as more snapshots come in.</div>';
+    }
+    return (
+      '<tr class="pf-detail-row" data-detail-for="' + escapeHtmlPf(symbol) + '">' +
+        '<td colspan="6"><div class="pf-detail-inner">' + body + '</div></td>' +
+      '</tr>'
+    );
+  }
+
   function renderPositions(positions) {
     const wrap = document.getElementById('positionsTableWrap');
     const body = document.getElementById('positionsTableBody');
     if (!wrap || !body) return;
     if (!Array.isArray(positions) || !positions.length) { wrap.hidden = true; body.innerHTML = ''; return; }
+    body.closest('table').dataset.positions = JSON.stringify(positions);
     body.innerHTML = positions.map(pos => {
       const pnl = pos.pnl_pct;
       const pnlClass = pnl == null ? '' : (pnl >= 0 ? 'pnl-pos' : 'pnl-neg');
       const pnlText = pnl == null ? '—' : (pnl > 0 ? '+' : '') + (Math.round(pnl * 100) / 100) + '%';
-      return (
-        '<tr>' +
-          '<td>' + escapeHtmlPf(pos.symbol) + '</td>' +
+      const color = (pnl == null || pnl >= 0) ? '#4dd6a8' : '#e0605c';
+      const row = (
+        '<tr class="pf-pos-row" data-symbol="' + escapeHtmlPf(pos.symbol) + '">' +
+          '<td>' + escapeHtmlPf(pos.symbol) + '<span class="pf-expand-hint">chart ›</span></td>' +
           '<td>' + fmtNum(pos.qty) + '</td>' +
           '<td>' + fmtNum(pos.entry_price) + '</td>' +
           '<td>' + fmtNum(pos.current_price) + '</td>' +
@@ -3299,20 +3349,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           '<td class="pf-range-cell">' + rangeBarHTML(pos.entry_price, pos.current_price) + '</td>' +
         '</tr>'
       );
+      return row + (pfOpenSymbol === pos.symbol ? pfDetailRowHTML(pos.symbol, color) : '');
     }).join('');
     wrap.hidden = false;
   }
 
+  document.addEventListener('click', function (e) {
+    const row = e.target.closest('.pf-pos-row');
+    if (!row) return;
+    const symbol = row.dataset.symbol;
+    pfOpenSymbol = pfOpenSymbol === symbol ? null : symbol;
+    const positionsRaw = row.closest('table') && row.closest('table').dataset.positions;
+    try {
+      renderPositions(JSON.parse(positionsRaw || '[]'));
+    } catch (err) { /* ignore — table just won't re-render this click */ }
+  });
+
   // Real trend line from value_history (day-bucketed portfolio value) —
   // no chart at all if there's fewer than 2 real points to draw between.
-  function renderPfChart(history, color) {
-    const holder = document.getElementById('pfChartHolder');
-    if (!holder) return;
-    if (!Array.isArray(history) || history.length < 2) {
-      holder.innerHTML = '<div class="pf-chart-empty">Trend chart fills in after a couple of days of synced snapshots.</div>';
-      return;
-    }
-    const w = 640, h = 110, pad = 4;
+  let pfGlowCounter = 0;
+  function pfChartSVG(history, color, w, h) {
+    const pad = 4;
     const vals = history.map(p => p.value);
     const min = Math.min(...vals), max = Math.max(...vals, min + 0.0001);
     const n = history.length;
@@ -3321,8 +3378,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const line = history.map((p, i) => xAt(i).toFixed(1) + ',' + yAt(p.value).toFixed(1)).join(' L ');
     const areaPath = 'M ' + xAt(0).toFixed(1) + ',' + (h - pad).toFixed(1) + ' L ' + line + ' L ' + xAt(n - 1).toFixed(1) + ',' + (h - pad).toFixed(1) + ' Z';
     const grid = '<line x1="0" y1="' + (h / 2).toFixed(1) + '" x2="' + w + '" y2="' + (h / 2).toFixed(1) + '" stroke="rgba(63,217,255,0.10)" stroke-width="1"/>';
-    const glowId = 'pfGlow';
-    holder.innerHTML = (
+    const glowId = 'pfGlow' + (pfGlowCounter++);
+    return (
       '<svg class="pf-chart" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
         '<defs><filter id="' + glowId + '" x="-20%" y="-40%" width="140%" height="180%">' +
           '<feGaussianBlur stdDeviation="3" result="blur"/>' +
@@ -3334,6 +3391,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         '<circle cx="' + xAt(n - 1).toFixed(1) + '" cy="' + yAt(vals[n - 1]).toFixed(1) + '" r="3.5" fill="' + color + '" filter="url(#' + glowId + ')"/>' +
       '</svg>'
     );
+  }
+
+  function renderPfChart(history, color) {
+    const holder = document.getElementById('pfChartHolder');
+    if (!holder) return;
+    if (!Array.isArray(history) || history.length < 2) {
+      holder.innerHTML = '<div class="pf-chart-empty">Trend chart fills in after a couple of days of synced snapshots.</div>';
+      return;
+    }
+    holder.innerHTML = pfChartSVG(history, color, 640, 110);
   }
 
   async function loadPortfolio() {
@@ -3379,6 +3446,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       }
 
       renderPfChart(p.value_history, isPos ? '#4dd6a8' : '#e0605c');
+      pfPositionsHistory = (p.positions_history && typeof p.positions_history === 'object') ? p.positions_history : {};
       renderPositions(p.positions);
     } catch (e) { /* offline or not set up yet — ticker/teaser just stay hidden */ }
   }
