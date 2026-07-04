@@ -17,13 +17,39 @@
 //     "open_positions": number,
 //     "alerts_count": number,
 //     "alerts_note": string | null,
-//     "synced_at": ISO timestamp string
+//     "synced_at": ISO timestamp string,
+//     "positions": [                         (optional)
+//       { "symbol": string, "qty": number, "entry_price": number,
+//         "current_price": number, "pnl_pct": number }, ...
+//     ]
 //   }
+//
+// Like the rest of this row, `positions` is read back out only through
+// /api/data-get.js's session-gated proxy — never via a direct anon-key
+// Supabase query — since app_state has no RLS policy for anon at all.
 //
 // Set PORTFOLIO_SECRET in Vercel's project env vars (any random
 // string) — this endpoint rejects requests that don't send the
 // matching `secret` so randoms can't write into your row.
 // ============================================================
+
+// Keep only well-formed rows with the expected fields/types — a
+// malformed automation payload shouldn't be able to wedge garbage
+// (or arbitrarily large objects) into app_state.
+function sanitizePositions(positions) {
+  if (!Array.isArray(positions)) return null;
+  const clean = positions
+    .filter(p => p && typeof p === 'object' && typeof p.symbol === 'string' && p.symbol.trim())
+    .slice(0, 200) // sane upper bound
+    .map(p => ({
+      symbol: p.symbol.trim().slice(0, 20),
+      qty: typeof p.qty === 'number' ? p.qty : null,
+      entry_price: typeof p.entry_price === 'number' ? p.entry_price : null,
+      current_price: typeof p.current_price === 'number' ? p.current_price : null,
+      pnl_pct: typeof p.pnl_pct === 'number' ? p.pnl_pct : null,
+    }));
+  return clean;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -68,6 +94,8 @@ export default async function handler(req, res) {
     }
   } catch (e) { /* fall back to an empty snapshot if the read fails */ }
 
+  const incomingPositions = sanitizePositions(body.positions);
+
   const payload = {
     portfolio_value: body.portfolio_value != null ? body.portfolio_value : existing.portfolio_value,
     day_change_pct: body.day_change_pct != null ? body.day_change_pct : existing.day_change_pct,
@@ -76,7 +104,9 @@ export default async function handler(req, res) {
     alerts_count: body.alerts_count != null ? body.alerts_count : existing.alerts_count,
     alerts_note: body.alerts_note !== undefined ? body.alerts_note : (existing.alerts_note != null ? existing.alerts_note : null),
     synced_at: body.synced_at || new Date().toISOString(),
+    positions: incomingPositions != null ? incomingPositions : (existing.positions || undefined),
   };
+  if (payload.positions === undefined) delete payload.positions;
 
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/app_state?on_conflict=key', {

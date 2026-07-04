@@ -1124,6 +1124,45 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
 }
 
+/* ----- positions table — only rendered when the synced snapshot
+   includes a `positions` array ----- */
+.positions-table-wrap {
+  position: relative;
+  background: rgba(63,217,255,0.03);
+  padding: 4px 4px 6px;
+  margin: 0 0 18px;
+  overflow-x: auto;
+}
+.positions-table-wrap[hidden] { display: none; }
+.positions-table-wrap::before, .positions-table-wrap::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+}
+.positions-table-wrap::before { top: 0; left: 0; border-top: 1px solid #3fd9ff; border-left: 1px solid #3fd9ff; }
+.positions-table-wrap::after  { bottom: 0; right: 0; border-bottom: 1px solid #3fd9ff; border-right: 1px solid #3fd9ff; }
+.positions-table {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--font-mono); font-size: 12px;
+  min-width: 420px;
+}
+.positions-table th {
+  text-align: right; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--text-tertiary);
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgba(63,217,255,0.10);
+}
+.positions-table th:first-child { text-align: left; }
+.positions-table td {
+  text-align: right; padding: 8px 12px;
+  color: var(--text-secondary); font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid rgba(63,217,255,0.05);
+}
+.positions-table tr:last-child td { border-bottom: none; }
+.positions-table td:first-child {
+  text-align: left; font-weight: 700; color: var(--text-primary);
+}
+.positions-table td.pnl-pos { color: #4dd6a8; font-weight: 700; }
+.positions-table td.pnl-neg { color: #e0605c; font-weight: 700; }
+
 /* ============================================================
    DEDUCT-FROM-NW BUTTON & CHOOSER (in order cards)
    ============================================================ */
@@ -1547,6 +1586,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <span id="portfolioTeaserPositions">0 positions</span>
     <span id="portfolioTeaserAlerts"></span>
   </div>
+</div>
+
+<div class="positions-table-wrap" id="positionsTableWrap" hidden>
+  <table class="positions-table">
+    <thead>
+      <tr>
+        <th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>P/L%</th>
+      </tr>
+    </thead>
+    <tbody id="positionsTableBody"></tbody>
+  </table>
 </div>
 
 <!-- ===== NET WORTH ===== -->
@@ -3271,6 +3321,34 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     if (n == null || isNaN(n)) return '0%';
     return (n > 0 ? '+' : '') + (Math.round(n * 100) / 100) + '%';
   }
+  function escapeHtmlPf(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function fmtNum(n) {
+    return n == null || isNaN(n) ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  function renderPositions(positions) {
+    const wrap = document.getElementById('positionsTableWrap');
+    const body = document.getElementById('positionsTableBody');
+    if (!wrap || !body) return;
+    if (!Array.isArray(positions) || !positions.length) { wrap.hidden = true; body.innerHTML = ''; return; }
+    body.innerHTML = positions.map(pos => {
+      const pnl = pos.pnl_pct;
+      const pnlClass = pnl == null ? '' : (pnl >= 0 ? 'pnl-pos' : 'pnl-neg');
+      const pnlText = pnl == null ? '—' : (pnl > 0 ? '+' : '') + (Math.round(pnl * 100) / 100) + '%';
+      return (
+        '<tr>' +
+          '<td>' + escapeHtmlPf(pos.symbol) + '</td>' +
+          '<td>' + fmtNum(pos.qty) + '</td>' +
+          '<td>' + fmtNum(pos.entry_price) + '</td>' +
+          '<td>' + fmtNum(pos.current_price) + '</td>' +
+          '<td class="' + pnlClass + '">' + pnlText + '</td>' +
+        '</tr>'
+      );
+    }).join('');
+    wrap.hidden = false;
+  }
 
   async function loadPortfolio() {
     try {
@@ -3310,6 +3388,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         alertsEl.textContent = p.alerts_count ? p.alerts_count + ' alert' + (p.alerts_count === 1 ? '' : 's') + (p.alerts_note ? ' · ' + p.alerts_note : '') : '';
       }
       if (teaser) teaser.hidden = false;
+
+      renderPositions(p.positions);
     } catch (e) { /* offline or not set up yet — ticker/teaser just stay hidden */ }
   }
   loadPortfolio();
