@@ -1,0 +1,165 @@
+/* =============================================================
+   HUD theme — shared sci-fi/HUD visual layer for the dashboard.
+   Link this after any page-specific <style> reset, then remap
+   that page's own CSS custom properties (--bg, --text-1, --good,
+   --warn, --bad, --info, --border, --font, etc.) to the tokens
+   below so existing component rules pick up the new look without
+   being rewritten one-by-one.
+   ============================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --hud-bg:      #050a0f;
+  --hud-cyan:    #3fd9ff;   /* primary accent — sleep/health */
+  --hud-amber:   #f0a83c;   /* secondary accent — warnings/HR */
+  --hud-teal:    #4dd6a8;   /* tertiary accent — finance/positive */
+  --hud-red:     #e0605c;   /* negative values */
+  --hud-muted:   #4a6b78;   /* muted text/labels */
+  --hud-text:    #e6f7fb;   /* main readable text */
+  --hud-font:    'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ----- base page ----- */
+html, body {
+  background: var(--hud-bg) !important;
+  color: var(--hud-text);
+  font-family: var(--hud-font);
+}
+
+/* Faint holographic grid — drawn with tiled SVG line art, not a
+   CSS gradient fill, per the "no gradients" rule. */
+body.hud-grid {
+  position: relative;
+}
+body.hud-grid::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M48 0H0V48' fill='none' stroke='%233fd9ff' stroke-width='1' opacity='0.07'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* ----- typography helpers ----- */
+.hud-label {
+  color: var(--hud-muted);
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-family: var(--hud-font);
+}
+
+/* ----- panel: angular bracket-corner frame instead of a box border ----- */
+.hud-panel {
+  position: relative;
+  background: rgba(63, 217, 255, 0.03);
+  border: none;
+  border-radius: 0;
+}
+.hud-panel::before,
+.hud-panel::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+.hud-panel::before {
+  top: 0;
+  left: 0;
+  border-top: 1px solid var(--hud-cyan);
+  border-left: 1px solid var(--hud-cyan);
+}
+.hud-panel::after {
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid var(--hud-cyan);
+  border-right: 1px solid var(--hud-cyan);
+}
+/* Color variants for the corner brackets, matched to the palette's
+   semantic accents. Apply alongside .hud-panel. */
+.hud-panel--amber::before, .hud-panel--amber::after { border-color: var(--hud-amber); }
+.hud-panel--teal::before,  .hud-panel--teal::after  { border-color: var(--hud-teal); }
+.hud-panel--red::before,   .hud-panel--red::after   { border-color: var(--hud-red); }
+.hud-panel--muted::before, .hud-panel--muted::after { border-color: var(--hud-muted); }
+
+/* ----- pulsing "system online" status dot ----- */
+.hud-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--hud-font);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--hud-muted);
+}
+.hud-status-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--hud-teal);
+  flex-shrink: 0;
+  animation: hud-pulse 2.2s ease-in-out infinite;
+}
+@keyframes hud-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+/* ----- circular SVG ring gauge for a page's key metric ----- */
+.hud-ring-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hud-ring { transform: rotate(-90deg); display: block; }
+.hud-ring-track { fill: none; stroke: rgba(63, 217, 255, 0.14); }
+.hud-ring-fill {
+  fill: none;
+  stroke: var(--hud-cyan);
+  stroke-linecap: butt;
+  transition: stroke-dashoffset 0.6s ease;
+}
+.hud-ring-fill.amber { stroke: var(--hud-amber); }
+.hud-ring-fill.teal  { stroke: var(--hud-teal); }
+.hud-ring-fill.red   { stroke: var(--hud-red); }
+.hud-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.hud-ring-value {
+  font-family: var(--hud-font);
+  color: var(--hud-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.hud-ring-caption {
+  color: var(--hud-muted);
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+/* ----- opt-in glow utilities (used by the desktop "reactor" hub look;
+   the flat card/panel components above stay glow-free by default) ----- */
+.hud-glow-cyan  { filter: drop-shadow(0 0 4px rgba(63,217,255,0.9)) drop-shadow(0 0 14px rgba(63,217,255,0.45)); }
+.hud-glow-amber { filter: drop-shadow(0 0 4px rgba(240,168,60,0.9)) drop-shadow(0 0 14px rgba(240,168,60,0.45)); }
+.hud-glow-teal  { filter: drop-shadow(0 0 4px rgba(77,214,168,0.9)) drop-shadow(0 0 14px rgba(77,214,168,0.45)); }
+.hud-glow-red   { filter: drop-shadow(0 0 4px rgba(224,96,92,0.9)) drop-shadow(0 0 14px rgba(224,96,92,0.45)); }
+.hud-text-glow  { text-shadow: 0 0 10px currentColor; }
+
+@keyframes hud-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes hud-spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+
+/* ----- slow reveal micro-animation for panels entering view ----- */
+@keyframes hud-reveal {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hud-reveal { animation: hud-reveal 0.5s ease both; }

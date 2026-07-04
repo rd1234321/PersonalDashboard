@@ -20,9 +20,10 @@
 <script src="lock.js"></script>                                  <!-- passcode lock screen -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#050a0f">
 <title>New Section · Dashboard</title>
 
+<link rel="stylesheet" href="hud-theme.css">
 <!-- Shared dashboard scripts. Keep these in this order. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>     <!-- cloud sync across devices -->
@@ -36,20 +37,20 @@
 /*  instead of hard-coding colors.                                */
 /* ============================================================= */
 :root {
-  --text-primary: #FAFAFA;   /* headings, key numbers   */
-  --text-secondary: #B8B6B0; /* body text               */
-  --text-tertiary: #76746E;  /* labels, captions, hints */
-  --success: #6BE3A4;        /* green  — done / good    */
-  --warning: #F2C063;        /* amber  — caution        */
-  --danger:  #FF6B6B;        /* red    — bad / delete   */
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-primary: #e6f7fb;   /* headings, key numbers   */
+  --text-secondary: #e6f7fb; /* body text               */
+  --text-tertiary: #4a6b78;  /* labels, captions, hints */
+  --success: #4dd6a8;        /* teal   — done / good    */
+  --warning: #f0a83c;        /* amber  — caution        */
+  --danger:  #e0605c;        /* red    — bad / delete   */
+  --font: var(--hud-font);
+  --font-mono: var(--hud-font);
 }
 
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: #050506;
+  background: var(--hud-bg);
   color: var(--text-secondary);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
@@ -62,50 +63,23 @@ body {
   overflow-x: hidden;
   padding: max(28px, env(safe-area-inset-top)) 20px 60px;
 }
-/* Soft drifting color glow behind everything. */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background:
-    radial-gradient(circle at 82% 14%, rgba(224, 118, 88, 0.16), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180, 180, 200, 0.06), transparent 50%);
-  filter: blur(40px);
-  pointer-events: none;
-  z-index: -2;
-  animation: drift 36s ease-in-out infinite alternate;
-}
-/* Faint dot texture. */
-body::after {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
-  background-size: 3px 3px;
-  pointer-events: none;
-  z-index: -1;
-}
-@keyframes drift {
-  0%   { transform: translate3d(0,0,0); }
-  100% { transform: translate3d(-22px, 14px, 0); }
-}
 
 .page { max-width: 1100px; margin: 0 auto; }
 
-/* Big gradient page title. */
+/* Page title. */
 .dash-title {
   margin: 0 0 14px;
   font-size: 28px; font-weight: 700;
   letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
+  color: var(--text-primary);
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
-/* Small uppercase section heading with a divider line. */
+/* Small section heading with a divider line. */
 .section { margin-top: 8px; }
 .section-title {
   font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
+  letter-spacing: 0.14em;
   color: var(--text-tertiary);
   display: flex; align-items: center; gap: 12px;
   margin-bottom: 12px;
@@ -116,21 +90,25 @@ body::after {
 }
 .section-title::after {
   content: ''; flex: 1; height: 1px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+  background: rgba(63,217,255,0.08);
 }
 
-/* THE GLASS CARD — the main building block. Wrap any section in this. */
+/* THE CARD — the main building block. Wrap any section in this.
+   Angular bracket corners instead of a rounded glass box. */
 .gm-card {
+  --accent: var(--hud-cyan);
   position: relative;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 16px;
+  background: rgba(63, 217, 255, 0.03);
+  border-radius: 0;
   padding: 20px;
   margin-bottom: 14px;
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   overflow: hidden;
 }
+.gm-card::before, .gm-card::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+}
+.gm-card::before { top: 0; left: 0; border-top: 1px solid var(--accent); border-left: 1px solid var(--accent); }
+.gm-card::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--accent); border-right: 1px solid var(--accent); }
 
 /* Card header: an eyebrow label + a big number. */
 .gm-header {
@@ -140,7 +118,7 @@ body::after {
 .gm-header-left { display: flex; flex-direction: column; }
 .gm-eyebrow {
   font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
+  letter-spacing: 0.14em;
   color: var(--text-tertiary); margin-bottom: 6px;
 }
 .gm-progress-row { display: flex; align-items: baseline; gap: 6px; }
@@ -152,19 +130,19 @@ body::after {
 .gm-progress-total { font-family: var(--font-mono); font-size: 18px; color: var(--text-tertiary); }
 .gm-progress-label {
   font-size: 11px; font-weight: 600;
-  letter-spacing: 0.10em; text-transform: uppercase;
+  letter-spacing: 0.10em;
   color: var(--text-tertiary); margin-left: 4px;
 }
 
-/* A little rounded "pill" — handy for streaks, tags, statuses. */
+/* A little flat tag — handy for streaks, tags, statuses. */
 .gm-streak {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 12px; border-radius: 999px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 12px; border-radius: 0;
+  background: rgba(63,217,255,0.04);
+  border: 1px solid rgba(63,217,255,0.10);
   color: var(--text-tertiary);
   font-size: 11px; font-weight: 600;
-  letter-spacing: 0.10em; text-transform: uppercase;
+  letter-spacing: 0.10em;
 }
 
 /* Stat grid — a row of metrics. Auto-wraps on small screens. */
@@ -174,10 +152,14 @@ body::after {
   gap: 12px;
 }
 .stat {
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px; padding: 14px;
+  position: relative;
+  background: rgba(63,217,255,0.03);
+  border: none;
+  border-radius: 0; padding: 14px;
 }
+.stat::before, .stat::after { content: ''; position: absolute; width: 10px; height: 10px; pointer-events: none; }
+.stat::before { top: 0; left: 0; border-top: 1px solid var(--hud-muted); border-left: 1px solid var(--hud-muted); }
+.stat::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--hud-muted); border-right: 1px solid var(--hud-muted); }
 .stat-num {
   font-size: 26px; font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -186,7 +168,7 @@ body::after {
 .stat-label {
   margin-top: 6px;
   font-size: 10.5px; font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-tertiary);
 }
 
@@ -199,40 +181,39 @@ body::after {
 .gm-row {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px; margin-bottom: 6px;
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
+  background: rgba(63,217,255,0.035);
+  border: 1px solid rgba(63,217,255,0.08);
+  border-radius: 0;
   transition: background 0.2s, opacity 0.3s;
 }
-.gm-row:hover { background: rgba(255,255,255,0.06); }
-.gm-row.gm-row-done { opacity: 0.45; background: rgba(107,227,164,0.04); }
+.gm-row:hover { background: rgba(63,217,255,0.06); }
+.gm-row.gm-row-done { opacity: 0.45; background: rgba(77,214,168,0.04); }
 .gm-row.gm-row-done .gm-text {
   text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.4);
 }
 .gm-check {
   appearance: none; -webkit-appearance: none;
   width: 22px; height: 22px; flex-shrink: 0; margin: 0;
-  border: 1.5px solid rgba(255,255,255,0.18);
-  background: rgba(0,0,0,0.28); border-radius: 7px;
+  border: 1.5px solid rgba(63,217,255,0.22);
+  background: rgba(0,0,0,0.28); border-radius: 0;
   position: relative; cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.25s;
+  transition: background 0.2s, border-color 0.2s;
 }
 .gm-check:checked {
   background: var(--success); border-color: var(--success);
-  box-shadow: 0 0 12px rgba(107,227,164,0.40);
 }
 .gm-check:checked::after {
   content: ''; position: absolute; left: 6px; top: 2px;
   width: 6px; height: 11px;
-  border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0;
+  border: solid var(--hud-bg); border-width: 0 2.5px 2.5px 0;
   transform: rotate(45deg);
 }
 .gm-text {
   flex: 1; font-size: 14px; color: var(--text-primary);
-  outline: none; border-radius: 4px; padding: 2px 4px; margin: -2px -4px;
+  outline: none; border-radius: 0; padding: 2px 4px; margin: -2px -4px;
 }
 .gm-text[contenteditable="true"] {
-  outline: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28);
+  outline: 1px solid rgba(63,217,255,0.22); background: rgba(0,0,0,0.28);
 }
 .goal-delete {
   border: 0; background: transparent; color: var(--text-tertiary);
@@ -246,30 +227,26 @@ body::after {
 .gm-input-wrap {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   margin-top: 14px; padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(63,217,255,0.08);
 }
 .gm-input {
   flex: 1; min-width: 0;
   padding: 11px 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px; background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(63,217,255,0.10);
+  border-radius: 0; background: rgba(0,0,0,0.28);
   color: var(--text-primary);
   font-family: inherit; font-size: 14px; outline: none;
   transition: border-color 0.2s, background 0.2s;
 }
 .gm-input::placeholder { color: var(--text-tertiary); }
-.gm-input:focus { border-color: rgba(255,255,255,0.28); background: rgba(0,0,0,0.36); }
+.gm-input:focus { border-color: var(--hud-cyan); background: rgba(0,0,0,0.36); }
 
-/* Primary (light) button. */
+/* Primary button. */
 .gm-add {
-  padding: 11px 20px; border: 0; border-radius: 12px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
-  color: #0A0A0B; font-family: inherit; font-size: 13px; font-weight: 700;
+  padding: 11px 20px; border: 1px solid var(--hud-cyan); border-radius: 0;
+  background: var(--hud-cyan);
+  color: var(--hud-bg); font-family: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.9),
-    0 2px 8px rgba(0,0,0,0.35),
-    0 8px 22px rgba(0,0,0,0.25);
   transition: transform 0.1s, filter 0.15s;
 }
 .gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
@@ -278,13 +255,13 @@ body::after {
 /* Secondary (ghost) button. */
 .gm-ghost {
   padding: 11px 18px;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 12px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(63,217,255,0.14);
+  border-radius: 0; background: rgba(63,217,255,0.04);
   color: var(--text-primary);
   font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
-.gm-ghost:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); }
+.gm-ghost:hover { background: rgba(63,217,255,0.08); border-color: rgba(63,217,255,0.3); }
 
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
@@ -293,7 +270,7 @@ body::after {
 }
 </style>
 </head>
-<body>
+<body class="hud-grid">
 <div class="page">
 
   <!-- Page title. Rename this. -->

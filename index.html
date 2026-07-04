@@ -5,9 +5,10 @@
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#050a0f">
 <title>Dashboard</title>
 
+<link rel="stylesheet" href="hud-theme.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
@@ -15,16 +16,16 @@
 <style>
 /* ===== Shared design tokens (same as the rest of the dashboard) ===== */
 :root {
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-primary: #e6f7fb;
+  --text-secondary: #e6f7fb;
+  --text-tertiary: #4a6b78;
+  --font: var(--hud-font);
+  --font-mono: var(--hud-font);
 }
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: #050506;
+  background: #050a0f;
   color: var(--text-secondary);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
@@ -34,28 +35,11 @@ body {
   min-height: 100vh; position: relative; overflow-x: hidden;
   padding: max(28px, env(safe-area-inset-top)) 20px 60px;
 }
-/* Soft drifting glow + dot texture (matches the other pages). */
-body::before {
-  content: ''; position: fixed; inset: 0;
-  background:
-    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.16), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
-  filter: blur(40px); pointer-events: none; z-index: -2;
-  animation: drift 36s ease-in-out infinite alternate;
-}
-body::after {
-  content: ''; position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
-  background-size: 3px 3px; pointer-events: none; z-index: -1;
-}
-@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
 
 .page { max-width: 1100px; margin: 0 auto; }
 .dash-title {
-  margin: 0 0 18px; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
+  margin: 0 0 18px; font-size: 28px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--text-primary);
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
@@ -68,32 +52,27 @@ body::after {
   gap: 14px;
 }
 .tile {
-  --accent: #6BE3A4;                 /* each tile overrides this */
+  --accent: #4dd6a8;                 /* each tile overrides this */
   position: relative; overflow: hidden;
   display: flex; flex-direction: column;
   padding: 20px;
-  border-radius: 18px;
+  border-radius: 0;
   text-decoration: none;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  background: rgba(63,217,255,0.03);
+  border: none;
+  transition: background 0.18s ease;
 }
-/* The "its own style" bit — a faint accent glow per tile. */
-.tile::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 78% 18%,
-              color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
-  opacity: 0.7; transition: opacity 0.18s ease;
+/* Angular bracket corners instead of a solid border. */
+.tile::before,
+.tile::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+  transition: border-color 0.18s ease;
 }
+.tile::before { top: 0; left: 0; border-top: 1px solid var(--accent); border-left: 1px solid var(--accent); }
+.tile::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--accent); border-right: 1px solid var(--accent); }
 .tile:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+  background: rgba(63,217,255,0.06);
 }
-.tile:hover::before { opacity: 1; }
 
 /* Tile sizes */
 .tile.big  { grid-column: span 2; grid-row: span 2; }
@@ -107,11 +86,12 @@ body::after {
 }
 .tile-emoji {
   font-size: 26px; line-height: 1;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent));
+  filter: grayscale(35%);
+  opacity: 0.9;
 }
 .tile-spacer { flex: 1; }
 .tile-title {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+  font-size: 22px; font-weight: 700; letter-spacing: 0.01em;
   color: var(--text-primary); margin: 0 0 4px;
 }
 .tile.big .tile-title { font-size: 28px; }
@@ -137,18 +117,108 @@ body::after {
   .tile.big, .tile.wide { grid-column: span 1; }
 }
 
+/* =====================================================================
+   DESKTOP-ONLY "reactor" layout — glowing central dial + scattered
+   circular nav gauges, replacing the bento grid above ~980px. The
+   bento grid above remains the phone/tablet layout untouched.
+   ===================================================================== */
+.hud-scatter { display: none; }
+@media (min-width: 980px) {
+  .bento { display: none; }
+  .hud-scatter {
+    display: block;
+    position: relative;
+    width: 100%;
+    max-width: 1080px;
+    aspect-ratio: 16 / 10;
+    margin: 10px auto 0;
+  }
+}
+
+.reactor {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 34%; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.reactor-rings { width: 100%; height: 100%; overflow: visible; }
+.reactor-rings circle { fill: none; }
+.r-track { stroke: rgba(63,217,255,0.10); stroke-width: 1; }
+.r-arc {
+  stroke-width: 1.5; stroke-linecap: butt;
+  transform-origin: 200px 200px;
+}
+.r-arc-cyan  { stroke: var(--hud-cyan);  filter: drop-shadow(0 0 5px rgba(63,217,255,0.8)); animation: hud-spin 18s linear infinite; }
+.r-arc-amber { stroke: var(--hud-amber); filter: drop-shadow(0 0 5px rgba(240,168,60,0.8)); animation: hud-spin-rev 26s linear infinite; }
+.r-core-ring { stroke: var(--hud-teal); stroke-width: 1; filter: drop-shadow(0 0 6px rgba(77,214,168,0.7)); }
+.reactor-core {
+  position: absolute; text-align: center; color: var(--text-primary);
+}
+.reactor-time {
+  font-size: clamp(20px, 2.6vw, 34px); font-weight: 700; letter-spacing: 0.04em;
+  color: #3fd9ff; text-shadow: 0 0 12px rgba(63,217,255,0.7);
+  font-variant-numeric: tabular-nums;
+}
+.reactor-date { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.12em; margin-top: 2px; }
+.reactor-label { font-size: 9px; color: var(--text-tertiary); letter-spacing: 0.2em; margin-top: 8px; }
+
+.hud-dial {
+  --accent: #3fd9ff;
+  position: absolute;
+  left: var(--dx); top: var(--dy);
+  transform: translate(-50%, -50%);
+  width: 118px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-decoration: none;
+  transition: transform 0.25s ease;
+}
+.hud-dial-ring-wrap { position: relative; width: 88px; height: 88px; }
+.hud-dial-ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.hud-dial-track { fill: none; stroke: rgba(63,217,255,0.10); stroke-width: 2; }
+.hud-dial-fill {
+  fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: butt;
+  filter: drop-shadow(0 0 5px var(--accent)) drop-shadow(0 0 12px var(--accent));
+  transition: stroke-dashoffset 0.6s ease;
+}
+.hud-dial-core {
+  position: absolute; inset: 10px;
+  border-radius: 50%;
+  background: rgba(5,10,15,0.85);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+}
+.hud-dial-label {
+  font-size: 12px; letter-spacing: 0.08em; color: var(--text-primary);
+  text-align: center;
+}
+.hud-dial-sub { font-size: 9.5px; color: var(--text-tertiary); letter-spacing: 0.08em; text-align: center; margin-top: -6px; }
+.hud-dial:hover { transform: translate(-50%, -50%) scale(1.08); }
+.hud-dial:hover .hud-dial-fill { filter: drop-shadow(0 0 8px var(--accent)) drop-shadow(0 0 20px var(--accent)); }
+
+@media (min-width: 980px) {
+  .hub-head { justify-content: center; position: relative; }
+  .hub-head .dash-title { font-size: 19px; letter-spacing: 0.16em; }
+  .hub-head .gear-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+}
+
 /* ===== Header row + gear ===== */
 .hub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .hub-head .dash-title { margin: 0; }
 .gear-btn {
   width: 42px; height: 42px; flex-shrink: 0;
+  position: relative;
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 12px; border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04); color: var(--text-secondary);
+  border-radius: 0; border: none;
+  background: rgba(63,217,255,0.05); color: var(--text-secondary);
   cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
 }
-.gear-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.gear-btn::before, .gear-btn::after {
+  content: ''; position: absolute; width: 8px; height: 8px; pointer-events: none;
+}
+.gear-btn::before { top: 0; left: 0; border-top: 1px solid #3fd9ff; border-left: 1px solid #3fd9ff; }
+.gear-btn::after  { bottom: 0; right: 0; border-bottom: 1px solid #3fd9ff; border-right: 1px solid #3fd9ff; }
+.gear-btn:hover { background: rgba(63,217,255,0.10); color: var(--text-primary); }
 .gear-btn:active { transform: scale(0.94) rotate(35deg); }
 .gear-btn svg { width: 22px; height: 22px; }
 
@@ -156,57 +226,67 @@ body::after {
 .modal-bg {
   position: fixed; inset: 0; z-index: 120; display: none;
   align-items: center; justify-content: center; padding: 20px;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  background: rgba(5,10,15,0.85);
 }
 .modal-bg.show { display: flex; }
 .modal {
+  position: relative;
   width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto;
-  background: #0e0e10; border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+  background: #050a0f; border: 1px solid rgba(63,217,255,0.16);
+  border-radius: 0; padding: 22px;
 }
+.modal::before, .modal::after {
+  content: ''; position: absolute; width: 16px; height: 16px; pointer-events: none;
+}
+.modal::before { top: 0; left: 0; border-top: 1px solid #3fd9ff; border-left: 1px solid #3fd9ff; }
+.modal::after  { bottom: 0; right: 0; border-bottom: 1px solid #3fd9ff; border-right: 1px solid #3fd9ff; }
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
+.modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.02em; }
 .modal-close { border: 0; background: transparent; color: var(--text-tertiary); font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
 .modal-close:hover { color: var(--text-primary); }
 .field { margin-bottom: 14px; }
-.field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 7px; display: block; }
+.field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-tertiary); margin-bottom: 7px; display: block; }
 .field-row { display: flex; gap: 8px; align-items: center; }
 .set-input {
   flex: 1; min-width: 0; padding: 11px 13px;
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 11px;
-  background: rgba(0,0,0,0.3); color: var(--text-primary);
+  border: 1px solid rgba(63,217,255,0.16); border-radius: 0;
+  background: rgba(63,217,255,0.03); color: var(--text-primary);
   font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.2s;
 }
-.set-input:focus { border-color: rgba(255,255,255,0.28); }
-.seg { display: inline-flex; border: 1px solid rgba(255,255,255,0.10); border-radius: 11px; overflow: hidden; flex-shrink: 0; }
+.set-input:focus { border-color: rgba(63,217,255,0.5); }
+.seg { display: inline-flex; border: 1px solid rgba(63,217,255,0.16); border-radius: 0; overflow: hidden; flex-shrink: 0; }
 .seg button { border: 0; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 13px; font-weight: 600; padding: 11px 14px; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.seg button.on { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+.seg button.on { background: rgba(63,217,255,0.14); color: var(--text-primary); }
 .set-save {
-  width: 100%; margin-top: 6px; padding: 13px; border: 0; border-radius: 12px;
-  background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B;
-  font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.25);
-  transition: filter 0.15s, transform 0.1s;
+  width: 100%; margin-top: 6px; padding: 13px; border: 1px solid #3fd9ff; border-radius: 0;
+  background: rgba(63,217,255,0.12); color: #e6f7fb;
+  font-family: inherit; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
 }
-.set-save:hover { filter: brightness(1.05); }
+.set-save:hover { background: rgba(63,217,255,0.22); }
 .set-save:active { transform: translateY(1px); }
-.set-status { text-align: center; font-size: 12px; color: var(--success); min-height: 16px; margin-top: 8px; }
-.section-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 20px 0 14px; }
-.whoop-box { margin-top: 8px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); }
+.set-status { text-align: center; font-size: 12px; color: var(--hud-teal); min-height: 16px; margin-top: 8px; }
+.section-divider { height: 1px; background: rgba(63,217,255,0.14); margin: 20px 0 14px; }
+.whoop-box { position: relative; margin-top: 8px; padding: 16px; border-radius: 0; background: rgba(63,217,255,0.025); border: none; }
+.whoop-box::before, .whoop-box::after {
+  content: ''; position: absolute; width: 10px; height: 10px; pointer-events: none;
+}
+.whoop-box::before { top: 0; left: 0; border-top: 1px solid #4a6b78; border-left: 1px solid #4a6b78; }
+.whoop-box::after  { bottom: 0; right: 0; border-bottom: 1px solid #4a6b78; border-right: 1px solid #4a6b78; }
 .whoop-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .whoop-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.whoop-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #76746E; }
-.whoop-status.on .dot { background: #6BE3A4; box-shadow: 0 0 8px rgba(107,227,164,0.7); }
+.whoop-status .dot { width: 7px; height: 7px; border-radius: 0; background: #4a6b78; }
+.whoop-status.on .dot { background: #4dd6a8; animation: hud-pulse 2.2s ease-in-out infinite; }
 .whoop-sync { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); text-align: right; }
 .whoop-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 14px; }
 .whoop-stat { text-align: center; }
 .whoop-stat .v { font-size: 20px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
-.whoop-stat .l { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 5px; }
-.whoop-btn { width: 100%; margin-top: 14px; padding: 11px; border: 1px solid rgba(255,255,255,0.12); border-radius: 11px; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.whoop-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+.whoop-stat .l { font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em; color: var(--text-tertiary); margin-top: 5px; }
+.whoop-btn { width: 100%; margin-top: 14px; padding: 11px; border: 1px solid rgba(63,217,255,0.2); border-radius: 0; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.whoop-btn:hover { background: rgba(63,217,255,0.08); color: var(--text-primary); }
 </style>
 </head>
-<body>
+<body class="hud-grid">
 <div class="page">
 
   <div class="hub-head">
@@ -222,7 +302,7 @@ body::after {
   <div class="bento">
 
     <!-- Big tile -->
-    <a class="tile big" href="main.html" style="--accent:#6BE3A4">
+    <a class="tile big" href="main.html" style="--accent:#4dd6a8">
       <div class="tile-top">
         <span class="tile-num">·01</span>
         <span class="tile-emoji">🏠</span>
@@ -236,7 +316,7 @@ body::after {
     </a>
 
     <!-- Wide tile -->
-    <a class="tile wide" href="gym.html" style="--accent:#7DD3FC">
+    <a class="tile wide" href="gym.html" style="--accent:#f0a83c">
       <div class="tile-top">
         <span class="tile-num">·02</span>
         <span class="tile-emoji">💪</span>
@@ -250,7 +330,7 @@ body::after {
     </a>
 
     <!-- Small tile -->
-    <a class="tile" href="health.html" style="--accent:#A7F3D0">
+    <a class="tile" href="health.html" style="--accent:#3fd9ff">
       <div class="tile-top">
         <span class="tile-num">·03</span>
         <span class="tile-emoji">💊</span>
@@ -264,7 +344,7 @@ body::after {
     </a>
 
     <!-- Small tile -->
-    <a class="tile" href="po-water.html" style="--accent:#60A5FA">
+    <a class="tile" href="po-water.html" style="--accent:#3fd9ff">
       <div class="tile-top">
         <span class="tile-num">·04</span>
         <span class="tile-emoji">💧</span>
@@ -278,7 +358,7 @@ body::after {
     </a>
 
     <!-- Wide tile -->
-    <a class="tile wide" href="finance.html" style="--accent:#F2C063">
+    <a class="tile wide" href="finance.html" style="--accent:#4dd6a8">
       <div class="tile-top">
         <span class="tile-num">·05</span>
         <span class="tile-emoji">📊</span>
@@ -292,7 +372,7 @@ body::after {
     </a>
 
     <!-- Small tile -->
-    <a class="tile" href="caffeine.html" style="--accent:#C9A36B">
+    <a class="tile" href="caffeine.html" style="--accent:#f0a83c">
       <div class="tile-top">
         <span class="tile-num">·06</span>
         <span class="tile-emoji">☕</span>
@@ -306,7 +386,7 @@ body::after {
     </a>
 
     <!-- Wide tile -->
-    <a class="tile wide" href="nova-lite.html" style="--accent:#A78BFA">
+    <a class="tile wide" href="nova-lite.html" style="--accent:#3fd9ff">
       <div class="tile-top">
         <span class="tile-num">·07</span>
         <span class="tile-emoji">🧠</span>
@@ -319,6 +399,108 @@ body::after {
       </div>
     </a>
 
+  </div>
+
+  <!-- ===== Desktop-only reactor layout (hidden under 980px, .bento above takes over) ===== -->
+  <div class="hud-scatter">
+    <div class="reactor">
+      <svg class="reactor-rings" viewBox="0 0 400 400">
+        <circle class="r-track" cx="200" cy="200" r="188"/>
+        <circle class="r-arc r-arc-cyan" cx="200" cy="200" r="188" stroke-dasharray="220 960"/>
+        <circle class="r-track" cx="200" cy="200" r="150"/>
+        <circle class="r-arc r-arc-amber" cx="200" cy="200" r="150" stroke-dasharray="160 760"/>
+        <circle class="r-core-ring" cx="200" cy="200" r="108"/>
+      </svg>
+      <div class="reactor-core">
+        <div class="reactor-time" id="reactorTime">00:00</div>
+        <div class="reactor-date" id="reactorDate">—</div>
+        <div class="reactor-label">rowans dashboard</div>
+      </div>
+    </div>
+
+    <a class="hud-dial" href="main.html" style="--accent:#4dd6a8; --dx:14%; --dy:16%;">
+      <div class="hud-dial-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
+          <circle class="hud-dial-fill" id="dialMainFill" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="276.5"/>
+        </svg>
+        <div class="hud-dial-core">🏠</div>
+      </div>
+      <span class="hud-dial-label">Main</span>
+      <span class="hud-dial-sub" id="dialMainSub">goals</span>
+    </a>
+
+    <a class="hud-dial" href="gym.html" style="--accent:#f0a83c; --dx:50%; --dy:8%;">
+      <div class="hud-dial-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
+          <circle class="hud-dial-fill" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="76"/>
+        </svg>
+        <div class="hud-dial-core">💪</div>
+      </div>
+      <span class="hud-dial-label">Fitness</span>
+      <span class="hud-dial-sub">workouts</span>
+    </a>
+
+    <a class="hud-dial" href="health.html" style="--accent:#3fd9ff; --dx:86%; --dy:16%;">
+      <div class="hud-dial-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
+          <circle class="hud-dial-fill" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="97"/>
+        </svg>
+        <div class="hud-dial-core">💊</div>
+      </div>
+      <span class="hud-dial-label">Health</span>
+      <span class="hud-dial-sub">vitals</span>
+    </a>
+
+    <a class="hud-dial" href="po-water.html" style="--accent:#3fd9ff; --dx:8%; --dy:58%;">
+      <div class="hud-dial-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
+          <circle class="hud-dial-fill" id="dialWaterFill" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="276.5"/>
+        </svg>
+        <div class="hud-dial-core">💧</div>
+      </div>
+      <span class="hud-dial-label">Water</span>
+      <span class="hud-dial-sub" id="dialWaterSub">hydration</span>
+    </a>
+
+    <a class="hud-dial" href="finance.html" style="--accent:#4dd6a8; --dx:92%; --dy:58%;">
+      <div class="hud-dial-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
+          <circle class="hud-dial-fill" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="55"/>
+        </svg>
+        <div class="hud-dial-core">📊</div>
+      </div>
+      <span class="hud-dial-label">Finance</span>
+      <span class="hud-dial-sub">net worth</span>
+    </a>
+
+    <a class="hud-dial" href="caffeine.html" style="--accent:#f0a83c; --dx:26%; --dy:92%;">
+      <div class="hud-dial-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
+          <circle class="hud-dial-fill" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="152"/>
+        </svg>
+        <div class="hud-dial-core">☕</div>
+      </div>
+      <span class="hud-dial-label">Caffeine</span>
+      <span class="hud-dial-sub">timing</span>
+    </a>
+
+    <a class="hud-dial" href="nova-lite.html" style="--accent:#3fd9ff; --dx:72%; --dy:92%;">
+      <div class="hud-dial-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="hud-dial-track" cx="50" cy="50" r="44"/>
+          <circle class="hud-dial-fill" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="28"/>
+        </svg>
+        <div class="hud-dial-core">🧠</div>
+      </div>
+      <span class="hud-dial-label">Nova</span>
+      <span class="hud-dial-sub">mentor</span>
+    </a>
   </div>
 </div>
 
@@ -565,6 +747,80 @@ body::after {
     if (!t || !t.access) { window.location.href = 'health.html'; return; }
     $('whAction').textContent = 'Syncing…'; syncWhoop();
   });
+})();
+</script>
+
+<!-- ===== Desktop reactor: live clock + read-only ring fills ===== -->
+<script>
+(function () {
+  'use strict';
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function tickClock() {
+    const now = new Date();
+    const t = document.getElementById('reactorTime');
+    const d = document.getElementById('reactorDate');
+    if (t) t.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    if (d) d.textContent = now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  tickClock();
+  setInterval(tickClock, 15000);
+
+  // Read-only mirrors of topbar.js's progress helpers, so the desktop
+  // dial rings show the same numbers as the shared topbar's water pill.
+  function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
+  function activeDateKey() {
+    const now = new Date();
+    const dt = new Date(now);
+    if (now.getHours() < 6) dt.setDate(dt.getDate() - 1);
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  }
+  function calendarDateKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function getGoalsProgress() {
+    const goals = loadJSON('goals:' + activeDateKey(), []);
+    const total = Array.isArray(goals) ? goals.length : 0;
+    const done = total ? goals.filter(g => g && g.done).length : 0;
+    return { done, total };
+  }
+  function getWaterProgress() {
+    const state = loadJSON('po_water_v1', null);
+    if (!state) return { done: 0, total: 0 };
+    const done = (state.logs || {})[calendarDateKey()] || 0;
+    const p = state.profile || { weightKg: 75 };
+    const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
+    const base = wKg * 35;
+    const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
+    const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
+    const subs = (state.substances || []).reduce((s, x) => {
+      const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
+      return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
+    }, 0);
+    let adjust = 0;
+    if (p.sex === 'm') adjust += 200;
+    if ((p.age || 0) >= 50) adjust += 100;
+    const totalMl = base + exercise + caffeine + subs + adjust;
+    let unitVol;
+    if (state.unit === 'glass') unitVol = state.glassMl || 250;
+    else if (state.unit === 'oz') unitVol = 30;
+    else if (state.unit === 'ml') unitVol = 1;
+    else unitVol = state.bottleMl || 500;
+    const total = Math.max(1, Math.ceil(totalMl / unitVol));
+    return { done, total };
+  }
+
+  const CIRC = 276.5;
+  function paintRing(fillEl, subEl, done, total, emptyLabel, doneSuffix) {
+    if (!fillEl) return;
+    const pct = total ? Math.min(1, done / total) : 0;
+    fillEl.style.strokeDashoffset = String(CIRC * (1 - pct));
+    if (subEl) subEl.textContent = total ? (done + '/' + total + ' ' + doneSuffix) : emptyLabel;
+  }
+  const g = getGoalsProgress();
+  paintRing(document.getElementById('dialMainFill'), document.getElementById('dialMainSub'), g.done, g.total, 'goals', 'goals');
+  const w = getWaterProgress();
+  paintRing(document.getElementById('dialWaterFill'), document.getElementById('dialWaterSub'), w.done, w.total, 'hydration', 'today');
 })();
 </script>
 </body>

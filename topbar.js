@@ -23,73 +23,89 @@
   const css = `
 .topbar {
   position: sticky; top: 0; z-index: 40;
-  display: flex; justify-content: flex-end; align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
   gap: 8px;
   padding: max(10px, env(safe-area-inset-top)) 14px 8px;
-  background: #0a0a0b;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  background: #050a0f;
+  border-bottom: 1px solid rgba(63, 217, 255, 0.16);
+  font-family: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
+}
+.topbar-status {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10px; letter-spacing: 0.12em;
+  color: #4a6b78;
+  white-space: nowrap;
+}
+.topbar-status-dot {
+  width: 6px; height: 6px; flex-shrink: 0;
+  background: #4dd6a8;
+  animation: topbar-pulse 2.2s ease-in-out infinite;
+}
+@keyframes topbar-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+.topbar-actions {
+  display: flex; align-items: stretch; gap: 8px;
 }
 .topbar-water-wrap {
   display: flex; align-items: stretch;
 }
 .topbar-water-pill {
+  position: relative;
   display: inline-flex; align-items: center; gap: 8px;
   padding: 9px 14px;
-  background: rgba(125, 211, 252, 0.08);
-  border: 1px solid rgba(125, 211, 252, 0.16);
+  background: rgba(63, 217, 255, 0.05);
+  border: 1px solid rgba(63, 217, 255, 0.18);
   border-right: none;
-  border-radius: 12px 0 0 12px;
   text-decoration: none;
-  color: #FAFAFA;
+  color: #e6f7fb;
   -webkit-tap-highlight-color: transparent;
 }
 .topbar-water-pill .topbar-pill-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #7DD3FC; flex-shrink: 0;
+  width: 7px; height: 7px;
+  background: #3fd9ff; flex-shrink: 0;
 }
-.topbar-water-pill.warn .topbar-pill-dot { background: #fbbf24; }
+.topbar-water-pill.warn .topbar-pill-dot { background: #f0a83c; }
 .topbar-water-pill.miss .topbar-pill-dot {
-  background: #ff8a8a;
+  background: #e0605c;
   animation: topbar-miss-pulse 1.6s ease-in-out infinite;
 }
 @keyframes topbar-miss-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50%      { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.2; }
 }
 .topbar-pill-count {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-family: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
   font-size: 13px; font-weight: 700;
-  color: #FAFAFA;
+  color: #e6f7fb;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .topbar-water-add {
   width: 44px;
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.28), rgba(110, 231, 183, 0.28));
-  color: #FFFFFF;
+  border: 1px solid rgba(63, 217, 255, 0.18);
+  background: rgba(63, 217, 255, 0.14);
+  color: #e6f7fb;
   font-family: inherit; font-size: 20px; font-weight: 700; line-height: 1;
   cursor: pointer;
-  border-radius: 0 12px 12px 0;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, transform 0.10s;
 }
 .topbar-water-add:active { transform: scale(0.94); }
 .topbar-water-add.flash {
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.7), rgba(110, 231, 183, 0.7));
+  background: rgba(63, 217, 255, 0.32);
 }
 .topbar-finance-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 44px; height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
+  border: 1px solid rgba(77, 214, 168, 0.22);
+  background: rgba(77, 214, 168, 0.06);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
 }
-.topbar-finance-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.topbar-finance-btn:hover { background: rgba(77, 214, 168, 0.12); }
 .topbar-finance-icon {
   font-size: 20px; line-height: 1;
   filter: grayscale(100%) brightness(1.4);
@@ -101,9 +117,9 @@
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
   display: flex; justify-content: space-around; align-items: stretch;
   padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
-  background: #0a0a0b;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  background: #050a0f;
+  border-top: 1px solid rgba(63, 217, 255, 0.16);
+  font-family: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
 }
 .bottombar-tab {
   flex: 1;
@@ -111,9 +127,9 @@
   gap: 3px;
   padding: 6px 0 4px;
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.45);
+  color: #4a6b78;
   font-size: 10px; font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s;
 }
@@ -124,7 +140,7 @@
   transition: opacity 0.15s, filter 0.15s, transform 0.10s;
 }
 .bottombar-tab.active {
-  color: #FAFAFA;
+  color: #3fd9ff;
 }
 .bottombar-tab.active .bottombar-tab-icon {
   filter: grayscale(100%) brightness(1.6);
@@ -137,8 +153,17 @@ body.has-bottombar {
   padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
 }
 
+/* The bottom tab bar is a phone-nav pattern — on desktop-width screens
+   it just wastes a strip of the window, so hide it above the tablet
+   breakpoint (pages already provide their own nav at that width). */
+@media (min-width: 980px) {
+  .bottombar { display: none; }
+  body.has-bottombar { padding-bottom: 60px !important; }
+}
+
 @media (max-width: 480px) {
   .topbar { padding-left: 10px; padding-right: 10px; gap: 6px; }
+  .topbar-status span:last-child { display: none; }
   .topbar-water-pill { padding: 8px 11px; gap: 6px; }
   .topbar-pill-count { font-size: 12px; }
   .topbar-water-add { width: 40px; font-size: 18px; }
@@ -197,16 +222,19 @@ body.topbar-modal-open {
   // -------- HTML --------
   const topbarHtml = `
 <header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
-  <div class="topbar-water-wrap">
-    <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
-      <span class="topbar-pill-dot"></span>
-      <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
+  <span class="topbar-status"><span class="topbar-status-dot"></span><span>system online</span></span>
+  <div class="topbar-actions">
+    <div class="topbar-water-wrap">
+      <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
+        <span class="topbar-pill-dot"></span>
+        <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
+      </a>
+      <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
+    </div>
+    <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
+      <span class="topbar-finance-icon">📊</span>
     </a>
-    <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
   </div>
-  <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
-    <span class="topbar-finance-icon">📊</span>
-  </a>
 </header>
 `;
 

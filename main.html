@@ -5,27 +5,28 @@
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#050a0f">
 <title>Rowans Dashboard</title>
+<link rel="stylesheet" href="hud-theme.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <style>
 :root {
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --success: #6BE3A4;
-  --warning: #F2C063;
-  --danger: #FF6B6B;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-primary: #e6f7fb;
+  --text-secondary: #e6f7fb;
+  --text-tertiary: #4a6b78;
+  --success: #4dd6a8;
+  --warning: #f0a83c;
+  --danger: #e0605c;
+  --font: var(--hud-font);
+  --font-mono: var(--hud-font);
 }
 
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: #050506;
+  background: #050a0f;
   color: var(--text-secondary);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
@@ -38,29 +39,6 @@ body {
   overflow-x: hidden;
   padding: max(28px, env(safe-area-inset-top)) 20px 60px;
 }
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background:
-    radial-gradient(circle at 82% 14%, rgba(224, 118, 88, 0.16), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180, 180, 200, 0.06), transparent 50%);
-  filter: blur(40px);
-  pointer-events: none;
-  z-index: -2;
-  animation: drift 36s ease-in-out infinite alternate;
-}
-body::after {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
-  background-size: 3px 3px;
-  pointer-events: none;
-  z-index: -1;
-}
-@keyframes drift {
-  0%   { transform: translate3d(0,0,0); }
-  100% { transform: translate3d(-22px, 14px, 0); }
-}
 
 .page {
   max-width: 1100px;
@@ -72,12 +50,8 @@ body::after {
   margin: 0 0 14px;
   font-size: 28px;
   font-weight: 700;
-  letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
@@ -92,29 +66,20 @@ body::after {
   position: relative; overflow: hidden;
   display: flex; align-items: center; gap: 10px;
   padding: 7px 12px;
-  border-radius: 12px;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.30) 100%),
-    repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  border: none;
+  border-radius: 0;
+  background: rgba(63,217,255,0.04);
 }
+.goal-ticker::before,
 .goal-ticker::after {
-  content: '';
-  position: absolute; top: 0; bottom: 0;
-  width: 30%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
-  pointer-events: none;
-  animation: ticker-sweep 8s linear infinite;
+  content: ''; position: absolute; width: 10px; height: 10px; pointer-events: none;
 }
-@keyframes ticker-sweep {
-  0%   { left: -40%; }
-  100% { left: 110%; }
-}
+.goal-ticker::before { top: 0; left: 0; border-top: 1px solid var(--hud-cyan); border-left: 1px solid var(--hud-cyan); }
+.goal-ticker::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--hud-cyan); border-right: 1px solid var(--hud-cyan); }
 .goal-ticker-led { display: inline-flex; align-items: center; }
 .goal-ticker-led-dot {
   width: 7px; height: 7px; border-radius: 50%;
-  background: #6BE3A4;
-  box-shadow: 0 0 8px rgba(107,227,164,0.7);
+  background: var(--success);
   animation: led-pulse 1.6s ease-in-out infinite;
 }
 @keyframes led-pulse {
@@ -161,8 +126,8 @@ body::after {
   letter-spacing: 0.04em;
   color: var(--text-secondary);
   padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.04);
+  border-radius: 0;
+  background: rgba(63,217,255,0.06);
 }
 @media (max-width: 480px) {
   .goal-ticker { padding: 9px 12px; }
@@ -173,24 +138,29 @@ body::after {
 
 /* ===== Component 3: Day Ring ===== */
 .day-ring-wrap {
+  position: relative;
   display: flex; flex-wrap: wrap;
   align-items: center; justify-content: center;
   gap: 26px;
   padding: 22px;
   margin-bottom: 22px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  border: none;
+  border-radius: 0;
+  background: rgba(63,217,255,0.03);
 }
+.day-ring-wrap::before,
+.day-ring-wrap::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+}
+.day-ring-wrap::before { top: 0; left: 0; border-top: 1px solid var(--hud-cyan); border-left: 1px solid var(--hud-cyan); }
+.day-ring-wrap::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--hud-cyan); border-right: 1px solid var(--hud-cyan); }
 .day-ring {
   position: relative;
   width: 168px; height: 168px;
   flex-shrink: 0;
 }
 .day-ring svg { width: 100%; height: 100%; display: block; }
-.day-ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+.day-ring-track { fill: none; stroke: rgba(63,217,255,0.14); stroke-width: 8; }
 .day-ring-fill {
   fill: none;
   stroke-width: 8;
@@ -217,7 +187,7 @@ body::after {
   margin-top: 5px;
   font-family: var(--font-mono);
   font-size: 9.5px; font-weight: 800;
-  letter-spacing: 0.16em; text-transform: uppercase;
+  letter-spacing: 0.14em;
   color: var(--text-tertiary);
 }
 .day-ring-clock {
@@ -244,7 +214,7 @@ body::after {
 .section { margin-top: 8px; }
 .section-title {
   font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
+  letter-spacing: 0.14em;
   color: var(--text-tertiary);
   display: flex; align-items: center; gap: 12px;
   margin-bottom: 12px;
@@ -255,26 +225,28 @@ body::after {
 }
 .section-title::after {
   content: ''; flex: 1; height: 1px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+  background: var(--text-tertiary); opacity: 0.2;
 }
 
 .gm-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 16px;
+  background: rgba(63,217,255,0.03);
+  border: none;
+  border-radius: 0;
   padding: 20px;
   margin-bottom: 14px;
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   transition: background 0.4s;
   overflow: hidden;
 }
-.gm-card.gm-all-done::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(107,227,164,0.10), transparent 60%);
-  pointer-events: none;
+.gm-card::before,
+.gm-card::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+}
+.gm-card::before { top: 0; left: 0; border-top: 1px solid var(--hud-cyan); border-left: 1px solid var(--hud-cyan); }
+.gm-card::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--hud-cyan); border-right: 1px solid var(--hud-cyan); }
+.gm-card.gm-all-done::before,
+.gm-card.gm-all-done::after {
+  border-color: var(--success);
 }
 .gm-card.gm-all-done .gm-progress-num,
 .gm-card.gm-all-done .gm-progress-label { color: var(--success); }
@@ -288,7 +260,7 @@ body::after {
 .gm-header-left { display: flex; flex-direction: column; }
 .gm-eyebrow {
   font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
+  letter-spacing: 0.14em;
   color: var(--text-tertiary);
   margin-bottom: 6px;
 }
@@ -307,7 +279,7 @@ body::after {
 }
 .gm-progress-label {
   font-size: 11px; font-weight: 600;
-  letter-spacing: 0.10em; text-transform: uppercase;
+  letter-spacing: 0.10em;
   color: var(--text-tertiary);
   margin-left: 4px;
 }
@@ -316,20 +288,35 @@ body::after {
   font-family: var(--font-mono);
   font-size: 11px; font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em; text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--text-tertiary);
 }
-.gm-card-tomorrow .gm-progress-row { display: none; }
+.gm-card-tomorrow .gm-progress-ring { display: none; }
+
+/* Goals-completed ring gauge: reuses the existing progress number/label,
+   just resized to sit inside the small hud-ring center. */
+.gm-progress-ring .gm-progress-row {
+  display: flex; align-items: baseline; justify-content: center; gap: 2px;
+}
+.gm-progress-ring .gm-progress-num {
+  font-size: 22px; letter-spacing: -0.03em;
+}
+.gm-progress-ring .gm-progress-total {
+  font-size: 11px;
+}
+.gm-progress-ring .gm-progress-label {
+  font-size: 8px; margin-left: 0; text-align: center; letter-spacing: 0.08em;
+}
 
 .gm-streak {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 0;
+  background: rgba(63,217,255,0.03);
+  border: 1px solid rgba(63,217,255,0.10);
   color: var(--text-tertiary);
   font-size: 11px; font-weight: 600;
-  letter-spacing: 0.10em; text-transform: uppercase;
+  letter-spacing: 0.10em;
   transition: background 0.25s, color 0.25s, border-color 0.25s;
 }
 .gm-streak-icon { font-size: 13px; }
@@ -339,12 +326,9 @@ body::after {
   font-variant-numeric: tabular-nums;
 }
 .gm-streak.gm-streak-active {
-  background: rgba(242,192,99,0.10);
-  color: #F2C063;
-  border-color: rgba(242,192,99,0.32);
-}
-.gm-streak.gm-streak-active .gm-streak-icon {
-  filter: drop-shadow(0 0 6px rgba(242,192,99,0.6));
+  background: rgba(240,168,60,0.10);
+  color: var(--warning);
+  border-color: rgba(240,168,60,0.32);
 }
 
 .gm-bar {
@@ -355,13 +339,12 @@ body::after {
 .gm-bar:empty { display: none; }
 .gm-bar-seg {
   flex: 1;
-  background: rgba(255,255,255,0.06);
-  border-radius: 3px;
-  transition: background 0.3s, box-shadow 0.3s;
+  background: rgba(63,217,255,0.08);
+  border-radius: 0;
+  transition: background 0.3s;
 }
 .gm-bar-seg-done {
-  background: #6BE3A4;
-  box-shadow: 0 0 6px rgba(107,227,164,0.40);
+  background: var(--success);
 }
 
 .goal-list { list-style: none; margin: 0; padding: 0; }
@@ -376,32 +359,32 @@ body::after {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px;
   margin-bottom: 6px;
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
+  background: rgba(63,217,255,0.025);
+  border: 1px solid rgba(63,217,255,0.08);
+  border-radius: 0;
   transition: background 0.2s, opacity 0.3s;
   position: relative;
 }
-.gm-row:hover { background: rgba(255,255,255,0.06); }
+.gm-row:hover { background: rgba(63,217,255,0.05); }
 .gm-row.gm-row-done {
   opacity: 0.45;
-  background: rgba(107,227,164,0.04);
+  background: rgba(77,214,168,0.04);
 }
 .gm-row.gm-row-done .gm-text {
   text-decoration: line-through;
-  text-decoration-color: rgba(255,255,255,0.4);
+  text-decoration-color: rgba(230,247,251,0.4);
 }
 .gm-row.gm-row-queued {
-  background: rgba(242,192,99,0.10);
-  box-shadow: inset 3px 0 0 0 #F2C063;
+  background: rgba(240,168,60,0.10);
+  border-left: 3px solid var(--warning);
 }
-.gm-row.gm-row-queued .gm-text { color: #FFE2A8; }
-.gm-row.is-drag-over { border-top: 2px solid #6BE3A4; }
+.gm-row.gm-row-queued .gm-text { color: var(--warning); }
+.gm-row.is-drag-over { border-top: 2px solid var(--success); }
 .gm-row.is-queue-flashing { animation: gm-queue-flash 0.48s ease-out; }
 @keyframes gm-queue-flash {
-  0%   { background: rgba(255,255,255,0.035); transform: scale(1); }
-  40%  { background: rgba(242,192,99,0.32); transform: scale(1.015); }
-  100% { background: rgba(255,255,255,0.035); transform: scale(1); }
+  0%   { background: rgba(63,217,255,0.025); transform: scale(1); }
+  40%  { background: rgba(240,168,60,0.32); transform: scale(1.015); }
+  100% { background: rgba(63,217,255,0.025); transform: scale(1); }
 }
 
 .gm-handle {
@@ -421,23 +404,22 @@ body::after {
   appearance: none; -webkit-appearance: none;
   width: 22px; height: 22px; flex-shrink: 0;
   margin: 0;
-  border: 1.5px solid rgba(255,255,255,0.18);
+  border: 1.5px solid rgba(63,217,255,0.22);
   background: rgba(0,0,0,0.28);
-  border-radius: 7px;
+  border-radius: 0;
   position: relative;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.25s;
+  transition: background 0.2s, border-color 0.2s;
 }
 .gm-check:checked {
-  background: #6BE3A4;
-  border-color: #6BE3A4;
-  box-shadow: 0 0 12px rgba(107,227,164,0.40);
+  background: var(--success);
+  border-color: var(--success);
 }
 .gm-check:checked::after {
   content: '';
   position: absolute; left: 6px; top: 2px;
   width: 6px; height: 11px;
-  border: solid #0A0A0B;
+  border: solid #050a0f;
   border-width: 0 2.5px 2.5px 0;
   transform: rotate(45deg);
   animation: gm-check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -454,12 +436,12 @@ body::after {
   color: var(--text-primary);
   cursor: text;
   outline: none;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 2px 4px;
   margin: -2px -4px;
 }
 .gm-text[contenteditable="true"] {
-  outline: 1px solid rgba(255,255,255,0.18);
+  outline: 1px solid rgba(63,217,255,0.28);
   background: rgba(0,0,0,0.28);
 }
 
@@ -469,15 +451,14 @@ body::after {
   font-size: 14px;
   cursor: pointer;
   padding: 4px 6px;
-  border-radius: 6px;
+  border-radius: 0;
   opacity: 0.55;
   transition: opacity 0.2s, color 0.2s, transform 0.1s;
 }
 .gm-queue-btn:hover { opacity: 1; }
 .gm-queue-btn.gm-queue-active {
-  color: #F2C063;
+  color: var(--warning);
   opacity: 1;
-  filter: drop-shadow(0 0 4px rgba(242,192,99,0.65));
 }
 .gm-queue-btn:disabled { cursor: not-allowed; opacity: 0.3; }
 
@@ -497,50 +478,50 @@ body::after {
   width: 100%;
   margin: 6px 0 0;
   padding: 9px;
-  border: 1px dashed rgba(255,255,255,0.12);
-  border-radius: 10px;
+  border: 1px dashed rgba(63,217,255,0.18);
+  border-radius: 0;
   background: transparent;
   color: var(--text-tertiary);
   font-family: inherit;
   font-size: 11px; font-weight: 600;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  letter-spacing: 0.1em;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
 }
-.gm-show-toggle:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.22); }
+.gm-show-toggle:hover { color: var(--text-primary); border-color: rgba(63,217,255,0.34); }
 
 .gm-push-btn {
   width: 100%;
   margin-top: 14px;
   padding: 11px;
-  border: 1px dashed rgba(255,255,255,0.16);
-  border-radius: 12px;
+  border: 1px dashed rgba(63,217,255,0.22);
+  border-radius: 0;
   background: transparent;
   color: var(--text-tertiary);
   font-family: inherit;
   font-size: 11px; font-weight: 700;
-  letter-spacing: 0.10em; text-transform: uppercase;
+  letter-spacing: 0.10em;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 .gm-push-btn:hover {
   color: var(--text-primary);
-  border-color: rgba(255,255,255,0.30);
+  border-color: rgba(63,217,255,0.40);
   border-style: solid;
-  background: rgba(255,255,255,0.04);
+  background: rgba(63,217,255,0.05);
 }
 
 .goal-input-wrap.gm-input-wrap {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(63,217,255,0.10);
 }
 .gm-input {
   flex: 1; min-width: 0;
   padding: 11px 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
+  border: 1px solid rgba(63,217,255,0.14);
+  border-radius: 0;
   background: rgba(0,0,0,0.28);
   color: var(--text-primary);
   font-family: inherit; font-size: 14px;
@@ -548,37 +529,33 @@ body::after {
   transition: border-color 0.2s, background 0.2s;
 }
 .gm-input::placeholder { color: var(--text-tertiary); }
-.gm-input:focus { border-color: rgba(255,255,255,0.28); background: rgba(0,0,0,0.36); }
+.gm-input:focus { border-color: rgba(63,217,255,0.45); background: rgba(0,0,0,0.36); }
 
 .gm-add {
   padding: 11px 20px;
-  border: 0; border-radius: 12px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
-  color: #0A0A0B;
+  border: 0; border-radius: 0;
+  background: var(--hud-cyan);
+  color: #050a0f;
   font-family: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.9),
-    0 2px 8px rgba(0,0,0,0.35),
-    0 8px 22px rgba(0,0,0,0.25);
   transition: transform 0.1s, filter 0.15s;
 }
-.gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.gm-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
 .gm-add:active { transform: translateY(0); }
 
 .gm-polish {
   padding: 11px 18px;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(63,217,255,0.18);
+  border-radius: 0;
+  background: rgba(63,217,255,0.04);
   color: var(--text-primary);
   font-family: inherit; font-size: 13px; font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 .gm-polish:hover {
-  background: rgba(255,255,255,0.07);
-  border-color: rgba(255,255,255,0.18);
+  background: rgba(63,217,255,0.08);
+  border-color: rgba(63,217,255,0.30);
 }
 
 .gm-status {
@@ -597,7 +574,7 @@ body::after {
 }
 </style>
 </head>
-<body>
+<body class="hud-grid">
 <div class="page">
 
   <h1 class="dash-title">Rowans Dashboard</h1>
@@ -619,14 +596,8 @@ body::after {
   <div class="day-ring-wrap">
     <div class="day-ring">
       <svg viewBox="0 0 120 120">
-        <defs>
-          <filter id="dayRingGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2.4" result="b" />
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
         <circle class="day-ring-track" cx="60" cy="60" r="52" />
-        <circle class="day-ring-fill"  cx="60" cy="60" r="52" id="dayRingFill" filter="url(#dayRingGlow)" />
+        <circle class="day-ring-fill"  cx="60" cy="60" r="52" id="dayRingFill" />
       </svg>
       <div class="day-ring-overlay">
         <div class="day-ring-percent" id="dayRingPercent">—</div>
@@ -649,10 +620,18 @@ body::after {
       <div class="gm-header">
         <div class="gm-header-left">
           <div class="gm-eyebrow" id="todayLabel">Today —</div>
-          <div class="gm-progress-row">
-            <span class="gm-progress-num"   id="gmProgressNum">0</span>
-            <span class="gm-progress-total" id="gmProgressTotal">/ 0</span>
-            <span class="gm-progress-label" id="gmProgressLabel">no goals yet</span>
+          <div class="hud-ring-wrap gm-progress-ring" style="width:96px;height:96px">
+            <svg class="hud-ring" viewBox="0 0 120 120" width="96" height="96">
+              <circle class="hud-ring-track" cx="60" cy="60" r="52" stroke-width="6"/>
+              <circle class="hud-ring-fill teal" id="gmProgressRingFill" cx="60" cy="60" r="52" stroke-width="6"
+                      stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+            </svg>
+            <div class="hud-ring-center">
+              <div class="gm-progress-row">
+                <span class="gm-progress-num"   id="gmProgressNum">0</span><span class="gm-progress-total" id="gmProgressTotal">/ 0</span>
+              </div>
+              <span class="gm-progress-label" id="gmProgressLabel">no goals yet</span>
+            </div>
           </div>
         </div>
         <div class="gm-streak" id="gmStreak">
@@ -936,7 +915,7 @@ body::after {
 
     if (hours < WAKE_HOUR) {
       fillEl.setAttribute('stroke-dashoffset', C);
-      fillEl.style.stroke = '#4D4B47';
+      fillEl.style.stroke = '#4a6b78';
       percentEl.textContent = '—';
       phaseEl.textContent   = 'SLEEPING';
       statusEl.textContent  = '😴 Still sleeping';
@@ -947,7 +926,7 @@ body::after {
 
     if (hours >= SLEEP_HOUR) {
       fillEl.setAttribute('stroke-dashoffset', 0);
-      fillEl.style.stroke = '#E25D7A';
+      fillEl.style.stroke = '#e0605c';
       percentEl.textContent = '100%';
       phaseEl.textContent   = 'PAST BEDTIME';
       statusEl.textContent  = '⚠️ Past bedtime';
@@ -1109,6 +1088,7 @@ body::after {
     const done  = goals.filter(g => g.done).length;
     document.getElementById('gmProgressNum').textContent   = done;
     document.getElementById('gmProgressTotal').textContent = '/ ' + total;
+    document.getElementById('gmProgressRingFill').setAttribute('stroke-dashoffset', 326.73 * (1 - (total > 0 ? done / total : 0)));
     const label = document.getElementById('gmProgressLabel');
     if (total === 0)        label.textContent = 'no goals yet';
     else if (done === total) label.textContent = 'all done — solid day';

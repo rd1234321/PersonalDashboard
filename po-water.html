@@ -18,8 +18,10 @@ Contact: rowan.wisere@gmail.com
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0b">
+<meta name="theme-color" content="#050a0f">
 <title>Water Coach</title>
+
+<link rel="stylesheet" href="hud-theme.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
@@ -62,25 +64,25 @@ const CONFIG = {
 
 <style>
 :root {
-  --bg: #0a0a0b;
-  --bg-card: #111113;
-  --text-1: #ffffff;
-  --text-2: rgba(255,255,255,0.6);
-  --text-3: rgba(255,255,255,0.4);
-  --text-4: rgba(255,255,255,0.25);
-  --border: rgba(255,255,255,0.06);
-  --border-strong: rgba(255,255,255,0.14);
-  --good: #6ee7b7;
-  --warn: #fbbf24;
-  --bad: #ff8a8a;
-  --info: #7DD3FC;
-  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
+  --bg: #050a0f;
+  --bg-card: rgba(63,217,255,0.03);
+  --text-1: #e6f7fb;
+  --text-2: #4a6b78;
+  --text-3: #4a6b78;
+  --text-4: #4a6b78;
+  --border: rgba(63,217,255,0.16);
+  --border-strong: rgba(63,217,255,0.3);
+  --good: #4dd6a8;
+  --warn: #f0a83c;
+  --bad: #e0605c;
+  --info: #3fd9ff;
+  --font: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
 }
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, #14141a 0%, #0a0a0b 60%);
+  background: #050a0f;
   color: var(--text-1);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
@@ -92,13 +94,13 @@ html, body {
 .day-pill {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 12px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(63,217,255,0.04);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--text-2);
   font-family: var(--font-mono);
-  font-size: 11px; font-weight: 700; letter-spacing: 0.10em;
-  text-transform: uppercase; margin-bottom: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+  margin-bottom: 10px;
   -webkit-tap-highlight-color: transparent;
 }
 .day-pill .day-sep { color: var(--text-4); }
@@ -107,43 +109,52 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 18px;
 }
-.title { font-size: 22px; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+.title { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; margin: 0; }
 .icon-btn {
   width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.04);
+  background: rgba(63,217,255,0.04);
   border: 1px solid var(--border);
-  border-radius: 10px; color: var(--text-2); cursor: pointer;
+  border-radius: 0; color: var(--text-2); cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.18s, color 0.18s;
 }
-.icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-1); }
+.icon-btn:hover { background: rgba(63,217,255,0.10); color: var(--text-1); }
 
 /* ----- Eyebrow divider ----- */
 .divider {
   display: flex; align-items: center; gap: 16px; margin-bottom: 14px;
 }
 .divider::before, .divider::after {
-  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.10);
+  content: ''; flex: 1; height: 1px; background: rgba(63,217,255,0.14);
 }
 .divider span {
   font-size: 11px; letter-spacing: 0.22em; font-weight: 600;
-  color: rgba(255,255,255,0.85);
+  color: var(--text-1);
 }
 
-/* ----- Card ----- */
+/* ----- Card (angular bracket-corner panel) ----- */
 .card {
+  position: relative;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 18px;
+  border: none;
+  border-radius: 0;
   padding: 22px 20px 18px;
   margin-bottom: 14px;
 }
+.card::before, .card::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+}
+.card::before { top: 0; left: 0; border-top: 1px solid var(--info); border-left: 1px solid var(--info); }
+.card::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--info); border-right: 1px solid var(--info); }
 
 /* ----- Water hero ----- */
 .water-label {
   font-size: 10px; letter-spacing: 0.20em; font-weight: 700;
-  color: var(--text-3); margin-bottom: 8px; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 8px;
+}
+.water-hero-row {
+  display: flex; align-items: center; gap: 20px; margin-bottom: 6px;
 }
 .water-row {
   display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;
@@ -159,23 +170,23 @@ html, body {
 /* Progress bar */
 .water-bar-wrap { position: relative; margin: 14px 0 22px; }
 .water-bar-track {
-  position: relative; height: 28px; border-radius: 14px;
-  background: rgba(255,255,255,0.04);
+  position: relative; height: 28px; border-radius: 0;
+  background: rgba(63,217,255,0.04);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 .water-bar-fill {
   position: absolute; top: 0; bottom: 0; left: 0;
-  border-radius: 14px;
-  background: linear-gradient(90deg, var(--info), var(--good));
+  border-radius: 0;
+  background: var(--info);
   transition: width 0.4s ease;
-  box-shadow: 0 0 18px rgba(110,231,183,0.18);
 }
 .water-bar-fill.over {
-  background: linear-gradient(90deg, var(--good), var(--warn));
+  background: var(--warn);
 }
 .water-bar-zone {
   position: absolute; top: 0; bottom: 0;
-  width: 1px; background: rgba(255,255,255,0.18);
+  width: 1px; background: rgba(63,217,255,0.25);
 }
 .water-bar-labels {
   display: flex; justify-content: space-between;
@@ -185,7 +196,6 @@ html, body {
 }
 .water-bar-labels .water-zone-name {
   color: var(--good); font-weight: 700; letter-spacing: 0.10em;
-  text-transform: lowercase;
 }
 
 /* Action row */
@@ -193,25 +203,26 @@ html, body {
   display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: stretch;
 }
 .water-minus-btn {
-  background: rgba(255,255,255,0.06);
-  border: none; border-radius: 16px;
+  background: rgba(63,217,255,0.06);
+  border: 1px solid var(--border); border-radius: 0;
   color: var(--text-1);
   font-size: 22px; font-weight: 700;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.water-minus-btn:hover { background: rgba(255,255,255,0.10); }
+.water-minus-btn:hover { background: rgba(63,217,255,0.10); }
 .water-minus-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .water-plus-btn {
-  background: linear-gradient(180deg, #ffffff 0%, #e8e5dd 100%);
-  color: #0a0a0b; border: none; border-radius: 16px;
+  background: rgba(63,217,255,0.12);
+  color: var(--text-1); border: 1px solid var(--info); border-radius: 0;
   font-family: inherit; font-size: 16px; font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer; padding: 16px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.40);
+  transition: background 0.15s, transform 0.1s;
 }
-.water-plus-btn:hover { transform: translateY(-1px); }
+.water-plus-btn:hover { background: rgba(63,217,255,0.22); }
 .water-plus-btn:active { transform: scale(0.98); }
 
 .water-helper {
@@ -225,21 +236,21 @@ html, body {
 .why-toggle {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   background: transparent; border: 1px solid var(--border);
-  color: var(--text-2); border-radius: 10px;
+  color: var(--text-2); border-radius: 0;
   padding: 11px 14px; cursor: pointer; margin-top: 14px;
   font-family: inherit; font-size: 12px; font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   -webkit-tap-highlight-color: transparent;
 }
-.why-toggle:hover { background: rgba(255,255,255,0.04); color: var(--text-1); }
+.why-toggle:hover { background: rgba(63,217,255,0.06); color: var(--text-1); }
 .why-arrow { transition: transform 0.2s; font-size: 14px; }
 .why-toggle[aria-expanded="true"] .why-arrow { transform: rotate(180deg); }
 .why-body {
   margin-top: 8px;
   padding: 14px 16px;
-  background: rgba(255,255,255,0.025);
+  background: rgba(63,217,255,0.025);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   display: none;
 }
 .why-body.show { display: block; }
@@ -267,13 +278,13 @@ html, body {
 .hist-row:last-child { border-bottom: none; }
 .hist-date { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
 .hist-bar-wrap {
-  height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden;
+  height: 8px; background: rgba(63,217,255,0.04); border-radius: 0; overflow: hidden;
 }
 .hist-bar-fill {
-  height: 100%; background: linear-gradient(90deg, var(--info), var(--good));
-  border-radius: 4px;
+  height: 100%; background: var(--info);
+  border-radius: 0;
 }
-.hist-bar-fill.miss { background: rgba(255,138,138,0.4); }
+.hist-bar-fill.miss { background: rgba(224,96,92,0.5); }
 .hist-count {
   font-family: var(--font-mono); font-size: 12px;
   color: var(--text-2); font-variant-numeric: tabular-nums;
@@ -283,9 +294,9 @@ html, body {
 .spark-wrap { padding: 6px 0; }
 .spark-svg { width: 100%; height: 70px; display: block; }
 .spark-bar { fill: var(--good); }
-.spark-bar.miss { fill: rgba(255,138,138,0.5); }
+.spark-bar.miss { fill: rgba(224,96,92,0.55); }
 .spark-target {
-  stroke: rgba(255,255,255,0.20);
+  stroke: rgba(63,217,255,0.25);
   stroke-width: 1; stroke-dasharray: 3 3;
   vector-effect: non-scaling-stroke;
 }
@@ -293,78 +304,83 @@ html, body {
 /* ----- Modal ----- */
 .modal-bg {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+  background: rgba(5,10,15,0.85);
   z-index: 100; align-items: center; justify-content: center; padding: 20px;
 }
 .modal-bg.show { display: flex; }
 .modal {
+  position: relative;
   width: 100%; max-width: 480px;
-  background: var(--bg-card);
+  background: #050a0f;
   border: 1px solid var(--border-strong);
-  border-radius: 16px;
+  border-radius: 0;
   padding: 22px; max-height: 88vh; overflow-y: auto;
 }
+.modal::before, .modal::after {
+  content: ''; position: absolute; width: 16px; height: 16px; pointer-events: none;
+}
+.modal::before { top: 0; left: 0; border-top: 1px solid var(--info); border-left: 1px solid var(--info); }
+.modal::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--info); border-right: 1px solid var(--info); }
 .modal h3 {
   margin: 0 0 14px; font-size: 17px; font-weight: 700;
 }
 .set-section { margin-bottom: 22px; }
 .set-section h4 {
   margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--text-3);
+  color: var(--text-3);
 }
 
 /* ----- Form fields ----- */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .field label {
   font-size: 11px; color: var(--text-3); font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 .field input[type="number"], .field input[type="text"], .field select {
-  background: rgba(0,0,0,0.28);
+  background: rgba(63,217,255,0.03);
   border: 1px solid var(--border);
   color: var(--text-1);
   font-family: inherit; font-size: 14px;
-  padding: 10px 12px; border-radius: 10px; outline: none;
+  padding: 10px 12px; border-radius: 0; outline: none;
   -moz-appearance: textfield;
 }
 .field input[type="number"]::-webkit-outer-spin-button,
 .field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .field input:focus, .field select:focus {
-  border-color: rgba(110,231,183,0.40);
-  box-shadow: 0 0 0 2px rgba(110,231,183,0.10);
+  border-color: var(--good);
 }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .seg {
   display: flex; gap: 4px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(63,217,255,0.04);
   border: 1px solid var(--border);
-  border-radius: 10px; padding: 3px;
+  border-radius: 0; padding: 3px;
 }
 .seg button {
   flex: 1; padding: 9px; border: none; background: transparent;
-  color: var(--text-3); border-radius: 7px;
+  color: var(--text-3); border-radius: 0;
   font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .seg button.active {
-  background: linear-gradient(180deg, #ffffff 0%, #e8e5dd 100%);
-  color: #0a0a0b;
+  background: rgba(63,217,255,0.16);
+  color: var(--text-1);
 }
 
 /* ----- Stimulant search ----- */
 .search-wrap { position: relative; }
 .search-input {
-  width: 100%; background: rgba(0,0,0,0.28);
+  width: 100%; background: rgba(63,217,255,0.03);
   border: 1px solid var(--border);
   color: var(--text-1); font-family: inherit; font-size: 14px;
-  padding: 11px 14px; border-radius: 10px; outline: none;
+  padding: 11px 14px; border-radius: 0; outline: none;
 }
-.search-input:focus { border-color: rgba(110,231,183,0.40); }
+.search-input:focus { border-color: var(--good); }
 .search-results {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  background: var(--bg-card);
+  background: #050a0f;
   border: 1px solid var(--border-strong);
-  border-radius: 10px; padding: 4px;
+  border-radius: 0; padding: 4px;
   max-height: 240px; overflow-y: auto;
   z-index: 5;
   display: none;
@@ -372,11 +388,11 @@ html, body {
 .search-results.show { display: block; }
 .search-result {
   display: flex; flex-direction: column; gap: 2px;
-  padding: 9px 12px; border-radius: 7px;
+  padding: 9px 12px; border-radius: 0;
   cursor: pointer; font-size: 13px;
   -webkit-tap-highlight-color: transparent;
 }
-.search-result:hover { background: rgba(255,255,255,0.05); }
+.search-result:hover { background: rgba(63,217,255,0.06); }
 .search-result-name { color: var(--text-1); font-weight: 600; }
 .search-result-meta {
   font-size: 10.5px; color: var(--text-3);
@@ -388,9 +404,9 @@ html, body {
 .sub-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
-  background: rgba(255,255,255,0.025);
+  background: rgba(63,217,255,0.025);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   flex-wrap: wrap;
 }
 .sub-row-info { flex: 1; min-width: 140px; }
@@ -402,9 +418,9 @@ html, body {
 }
 .sub-row-dose {
   display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(0,0,0,0.30);
+  background: rgba(63,217,255,0.05);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 4px 8px;
 }
 .sub-row-dose .sub-dose-input {
@@ -431,24 +447,26 @@ html, body {
 /* ----- Buttons ----- */
 .btn-primary {
   width: 100%; padding: 13px;
-  border: none;
-  background: linear-gradient(180deg, #ffffff 0%, #e8e5dd 100%);
-  color: #0a0a0b; border-radius: 12px;
+  border: 1px solid var(--info);
+  background: rgba(63,217,255,0.12);
+  color: var(--text-1); border-radius: 0;
   font-family: inherit; font-size: 14px; font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.40);
+  transition: background 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
+.btn-primary:hover { background: rgba(63,217,255,0.22); }
 .btn-secondary {
   padding: 11px 16px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.04);
-  color: var(--text-1); border-radius: 10px;
+  background: rgba(63,217,255,0.04);
+  color: var(--text-1); border-radius: 0;
   font-family: inherit; font-size: 13px; font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.btn-secondary:hover { background: rgba(255,255,255,0.10); }
+.btn-secondary:hover { background: rgba(63,217,255,0.10); }
 .modal-actions {
   display: flex; gap: 8px; margin-top: 16px;
 }
@@ -460,7 +478,7 @@ html, body {
 }
 </style>
 </head>
-<body>
+<body class="hud-grid">
 
 <div class="shell">
 
@@ -479,9 +497,22 @@ html, body {
 
   <div class="card">
     <div class="water-label" id="waterUnitLabel">BOTTLES DRANK TODAY</div>
-    <div class="water-row">
-      <span class="water-num" id="waterNum">0</span>
-      <span class="water-target" id="waterTarget">/ 9</span>
+    <div class="water-hero-row">
+      <div class="hud-ring-wrap" style="width:104px;height:104px;flex-shrink:0">
+        <svg class="hud-ring" viewBox="0 0 120 120" width="104" height="104">
+          <circle class="hud-ring-track" cx="60" cy="60" r="52" stroke-width="6"/>
+          <circle class="hud-ring-fill" id="waterRingFill" cx="60" cy="60" r="52" stroke-width="6"
+                  stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+        </svg>
+        <div class="hud-ring-center">
+          <span class="hud-ring-value" id="waterRingValueText" style="font-size:17px">0%</span>
+          <span class="hud-ring-caption" style="font-size:8px">hydration</span>
+        </div>
+      </div>
+      <div class="water-row" style="margin-bottom:0">
+        <span class="water-num" id="waterNum">0</span>
+        <span class="water-target" id="waterTarget">/ 9</span>
+      </div>
     </div>
 
     <div class="water-bar-wrap">
@@ -618,7 +649,7 @@ html, body {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-secondary" id="setExport">Export JSON</button>
         <button class="btn-secondary" id="setImport">Import JSON</button>
-        <button class="btn-secondary" id="setReset" style="color:var(--bad);border-color:rgba(255,138,138,0.3)">Reset all</button>
+        <button class="btn-secondary" id="setReset" style="color:var(--bad);border-color:rgba(224,96,92,0.3)">Reset all</button>
       </div>
       <input type="file" id="setImportFile" accept=".json" style="display:none">
     </div>
@@ -801,6 +832,11 @@ html, body {
     const fill = $('waterBarFill');
     fill.style.width = fillPct + '%';
     fill.classList.toggle('over', pctRaw > 100);
+
+    // Ring gauge mirrors the same progress value shown in the bar above.
+    const ringPct = Math.max(0, Math.min(1, count / targetUnits));
+    $('waterRingFill').style.strokeDashoffset = (326.73 * (1 - ringPct)).toFixed(2);
+    $('waterRingValueText').textContent = Math.round(ringPct * 100) + '%';
     $('waterBarMin').textContent = '0';
     $('waterBarMax').textContent = (Math.ceil(targetUnits * 1.5)) + '+';
     // Healthy zone bands at 65% and 100%
@@ -890,7 +926,7 @@ html, body {
       const h = (v / maxVal) * (H - pad * 2);
       const y = H - pad - h;
       const cls = (v >= target) ? 'spark-bar' : 'spark-bar miss';
-      html += '<rect class="' + cls + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(0, h).toFixed(1) + '" rx="2"/>';
+      html += '<rect class="' + cls + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(0, h).toFixed(1) + '" rx="0"/>';
     });
     svg.innerHTML = html;
   }
