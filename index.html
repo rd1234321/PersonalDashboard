@@ -560,7 +560,7 @@ body {
 
     <div class="hud-corner tl"><span class="hud-corner-text">sys // <b>online</b><br>build <span id="hudBuild">-</span></span></div>
     <div class="hud-corner tr"><span class="hud-corner-text" id="hudGoalsReadout">goals -/-</span></div>
-    <div class="hud-corner bl"><span class="hud-corner-text" id="hudWaterReadout">hydration -/-</span></div>
+    <div class="hud-corner bl"><span class="hud-corner-text" id="hudWaterReadout">calories -/-</span></div>
     <div class="hud-corner br"><span class="hud-corner-text" id="hudClockReadout">--:--:--</span></div>
 
     <div class="reactor">
@@ -862,30 +862,14 @@ body {
     const done = total ? goals.filter(g => g && g.done).length : 0;
     return { done, total };
   }
-  function getWaterProgress() {
-    const state = loadJSON('po_water_v1', null);
+  function getNutritionProgress() {
+    const state = loadJSON('nutrition_v1', null);
     if (!state) return { done: 0, total: 0 };
-    const done = (state.logs || {})[calendarDateKey()] || 0;
-    const p = state.profile || { weightKg: 75 };
-    const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
-    const base = wKg * 35;
-    const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
-    const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
-    const subs = (state.substances || []).reduce((s, x) => {
-      const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
-      return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
-    }, 0);
-    let adjust = 0;
-    if (p.sex === 'm') adjust += 200;
-    if ((p.age || 0) >= 50) adjust += 100;
-    const totalMl = base + exercise + caffeine + subs + adjust;
-    let unitVol;
-    if (state.unit === 'glass') unitVol = state.glassMl || 250;
-    else if (state.unit === 'oz') unitVol = 30;
-    else if (state.unit === 'ml') unitVol = 1;
-    else unitVol = state.bottleMl || 500;
-    const total = Math.max(1, Math.ceil(totalMl / unitVol));
-    return { done, total };
+    const goals = state.goals || {};
+    const total = goals.calories || 0;
+    const entries = (state.logs || {})[calendarDateKey()] || [];
+    const done = entries.reduce((s, e) => s + (e && e.cal || 0), 0);
+    return { done: Math.round(done), total };
   }
 
   const CIRC = 276.5;
@@ -897,8 +881,8 @@ body {
   }
   const g = getGoalsProgress();
   paintRing(document.getElementById('dialMainFill'), document.getElementById('dialMainSub'), g.done, g.total, 'goals', 'goals');
-  const w = getWaterProgress();
-  paintRing(document.getElementById('dialWaterFill'), document.getElementById('dialWaterSub'), w.done, w.total, 'hydration', 'today');
+  const w = getNutritionProgress();
+  paintRing(document.getElementById('dialWaterFill'), document.getElementById('dialWaterSub'), w.done, w.total, 'nutrition', 'kcal');
 
   // ---- corner telemetry readouts (all values already computed above) ----
   const buildEl = document.getElementById('hudBuild');
@@ -906,7 +890,7 @@ body {
   const goalsReadout = document.getElementById('hudGoalsReadout');
   if (goalsReadout) goalsReadout.textContent = 'goals ' + (g.total ? g.done + '/' + g.total : '-/-');
   const waterReadout = document.getElementById('hudWaterReadout');
-  if (waterReadout) waterReadout.textContent = 'hydration ' + (w.total ? w.done + '/' + w.total : '-/-');
+  if (waterReadout) waterReadout.textContent = 'calories ' + (w.total ? w.done + '/' + w.total : '-/-');
   const clockReadout = document.getElementById('hudClockReadout');
   function tickCornerClock() {
     if (!clockReadout) return;
