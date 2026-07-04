@@ -3,11 +3,12 @@
 //
 // Receives a portfolio snapshot from whatever you're using to push
 // one (a broker's automation, a scheduled script, a shortcut, ...)
-// and overwrites the single latest snapshot into the same Supabase
-// app_state table the rest of the dashboard already uses (row key =
-// 'portfolio_summary'). Unlike api/apple-health.js, there's no
-// history/time-series to merge — we only ever care about the most
-// recent portfolio state, so each POST just replaces the row.
+// and upserts it into the same Supabase app_state table the rest of
+// the dashboard already uses (row key = 'portfolio_summary'). Most
+// fields (value, change, positions, ...) are always the latest snapshot
+// — no merge — but portfolio_value also gets appended to a day-bucketed
+// value_history (same approach as api/apple-health.js) so the dashboard
+// can chart a real trend instead of faking one from a single number.
 //
 // Expected JSON body:
 //   {
@@ -95,9 +96,25 @@ export default async function handler(req, res) {
   } catch (e) { /* fall back to an empty snapshot if the read fails */ }
 
   const incomingPositions = sanitizePositions(body.positions);
+  const portfolioValue = body.portfolio_value != null ? body.portfolio_value : existing.portfolio_value;
+
+  // One point per calendar day (last sync of the day wins), capped at 60 —
+  // same shape/approach as api/apple-health.js's history, so the dashboard
+  // can chart a real trend line instead of faking one from a single value.
+  const today = new Date().toISOString().slice(0, 10);
+  const priorHistory = Array.isArray(existing.value_history) ? existing.value_history : [];
+  let valueHistory = priorHistory;
+  if (typeof portfolioValue === 'number') {
+    const byDay = new Map(priorHistory.map(p => [p.date, p.value]));
+    byDay.set(today, portfolioValue);
+    valueHistory = Array.from(byDay.entries())
+      .map(([date, value]) => ({ date, value }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-60);
+  }
 
   const payload = {
-    portfolio_value: body.portfolio_value != null ? body.portfolio_value : existing.portfolio_value,
+    portfolio_value: portfolioValue,
     day_change_pct: body.day_change_pct != null ? body.day_change_pct : existing.day_change_pct,
     day_change_usd: body.day_change_usd != null ? body.day_change_usd : existing.day_change_usd,
     open_positions: body.open_positions != null ? body.open_positions : existing.open_positions,
@@ -105,6 +122,7 @@ export default async function handler(req, res) {
     alerts_note: body.alerts_note !== undefined ? body.alerts_note : (existing.alerts_note != null ? existing.alerts_note : null),
     synced_at: body.synced_at || new Date().toISOString(),
     positions: incomingPositions != null ? incomingPositions : (existing.positions || undefined),
+    value_history: valueHistory,
   };
   if (payload.positions === undefined) delete payload.positions;
 

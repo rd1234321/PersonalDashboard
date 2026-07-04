@@ -141,11 +141,12 @@ snapshot to the dashboard whenever it runs.
      "synced_at": "2026-07-04T13:00:00Z"
    }
    ```
-   Only the most recent snapshot is kept (no history) — each POST replaces the last one, and a
-   partial payload merges over whatever fields were already there.
-3. Once a snapshot lands, a "portfolio ±X% today" segment appears in the main page's ticker and
-   a small teaser tile fills in — both stay hidden until the first snapshot arrives, and hide
-   again gracefully if a later read ever fails.
+   Most fields are always the latest snapshot (a partial payload merges over whatever was
+   already there), except `portfolio_value`, which also gets appended to a day-bucketed history
+   so the Finance page can chart a real trend line.
+3. Once a snapshot lands, a "portfolio ±X% today" segment appears in Finance's ticker and a
+   teaser tile + trend chart fill in — both stay hidden until the first snapshot arrives, and
+   hide again gracefully if a later read ever fails.
 
 > This reuses the same `app_state` table as everything else (row key `portfolio_summary`), so no
 > extra Supabase setup is needed beyond the SQL in step 2 above.
