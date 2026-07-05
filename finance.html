@@ -1331,6 +1331,69 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .pf-price-src.is-cached { color: var(--text-tertiary); }
 .pf-price-src.is-cached .pf-price-src-dot { background: var(--text-tertiary); }
 
+/* ----- table / orbit view toggle ----- */
+.pf-view-toggle {
+  display: inline-flex; gap: 0; margin-bottom: 12px;
+  border: 1px solid rgba(63,217,255,0.16);
+}
+.pf-view-toggle[hidden] { display: none; }
+.pf-view-toggle button {
+  border: 0; background: transparent; color: var(--text-tertiary);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; padding: 7px 14px; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pf-view-toggle button.on { background: rgba(63,217,255,0.16); color: var(--text-primary); }
+.pf-view-toggle button:hover:not(.on) { background: rgba(63,217,255,0.06); }
+
+/* ----- orbit view ----- */
+.pf-orbit-wrap {
+  position: relative;
+  background: #02040a;
+  padding: 4px 4px 6px;
+  margin: 0 0 18px;
+}
+.pf-orbit-wrap[hidden] { display: none; }
+.pf-orbit-wrap::before, .pf-orbit-wrap::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+  animation: pf-corner-pulse 3.2s ease-in-out infinite;
+}
+.pf-orbit-wrap::before { top: 0; left: 0; border-top: 1px solid #3fd9ff; border-left: 1px solid #3fd9ff; }
+.pf-orbit-wrap::after  { bottom: 0; right: 0; border-bottom: 1px solid #3fd9ff; border-right: 1px solid #3fd9ff; animation-delay: 1.1s; }
+.orbit-svg { width: 100%; height: auto; max-height: 460px; display: block; }
+.orbit-core-label {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.14em; fill: var(--text-tertiary);
+}
+.orbit-core-value {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  fill: #e6f7fb;
+}
+.orbit-node { cursor: pointer; }
+.orbit-node-label {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.04em; pointer-events: none;
+}
+.pf-orbit-legend {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 14px 14px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
+}
+.pf-orbit-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.pf-orbit-dot { width: 8px; height: 8px; border-radius: 50%; border: 2px solid; background: rgba(0,0,0,0.4); }
+.pf-orbit-dot.pos { border-color: #4dd6a8; }
+.pf-orbit-dot.neg { border-color: #e0605c; }
+.pf-orbit-legend-note { font-style: italic; opacity: 0.8; }
+.pf-orbit-detail { margin: 0 14px 14px; }
+.pf-detail-head-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pf-detail-head-symbol { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.04em; }
+.pf-detail-close-btn {
+  border: 0; background: transparent; color: #4a6b78;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; cursor: pointer; padding: 4px 6px; transition: color 0.15s;
+}
+.pf-detail-close-btn:hover { color: #e6f7fb; }
+
 /* ============================================================
    DEDUCT-FROM-NW BUTTON & CHOOSER (in order cards)
    ============================================================ */
@@ -1786,6 +1849,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <div id="pfChartHolder"></div>
     </div>
 
+    <div class="pf-view-toggle" id="pfViewToggle" hidden>
+      <button type="button" data-view="table" class="on">☰ Table</button>
+      <button type="button" data-view="orbit">◎ Orbit</button>
+    </div>
+
     <div class="positions-table-wrap" id="positionsTableWrap" hidden>
       <table class="positions-table">
         <thead>
@@ -1795,6 +1863,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         </thead>
         <tbody id="positionsTableBody"></tbody>
       </table>
+    </div>
+
+    <div class="pf-orbit-wrap" id="orbitViewWrap" hidden>
+      <svg id="orbitSvg" viewBox="0 0 400 400" class="orbit-svg" aria-label="Portfolio positions orbiting the total value"></svg>
+      <div class="pf-orbit-legend">
+        <span class="pf-orbit-legend-item"><span class="pf-orbit-dot pos"></span>gaining</span>
+        <span class="pf-orbit-legend-item"><span class="pf-orbit-dot neg"></span>losing</span>
+        <span class="pf-orbit-legend-note">size = weight in portfolio</span>
+      </div>
+      <div id="orbitDetailHolder"></div>
     </div>
   </div>
 
@@ -3264,14 +3342,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   let pfPositionsHistory = {};
   let pfOpenSymbol = null;
 
-  function pfDetailRowHTML(symbol, color) {
+  function pfDetailBodyHTML(symbol, color) {
     const history = pfPositionsHistory[symbol];
-    let body;
     if (Array.isArray(history) && history.length >= 3) {
       const vals = history.map(p => p.value);
       const min = Math.min(...vals), max = Math.max(...vals);
       const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-      body = (
+      return (
         '<div class="pf-detail-chart">' + pfChartSVG(history, color, 640, 120) + '</div>' +
         '<div class="pf-detail-stats">' +
           '<div class="pf-detail-stat"><div class="pf-detail-stat-label">MIN</div><div class="pf-detail-stat-val">' + fmtNum(min) + '</div></div>' +
@@ -3279,12 +3356,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           '<div class="pf-detail-stat"><div class="pf-detail-stat-label">MAX</div><div class="pf-detail-stat-val">' + fmtNum(max) + '</div></div>' +
         '</div>'
       );
-    } else {
-      body = '<div class="pf-chart-empty">Not enough synced history yet to chart ' + escapeHtmlPf(symbol) + ' — this fills in as more snapshots come in.</div>';
     }
+    return '<div class="pf-chart-empty">Not enough synced history yet to chart ' + escapeHtmlPf(symbol) + ' — this fills in as more snapshots come in.</div>';
+  }
+
+  function pfDetailRowHTML(symbol, color) {
     return (
       '<tr class="pf-detail-row" data-detail-for="' + escapeHtmlPf(symbol) + '">' +
-        '<td colspan="7"><div class="pf-detail-inner">' + body + '</div></td>' +
+        '<td colspan="7"><div class="pf-detail-inner">' + pfDetailBodyHTML(symbol, color) + '</div></td>' +
       '</tr>'
     );
   }
@@ -3293,7 +3372,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const wrap = document.getElementById('positionsTableWrap');
     const body = document.getElementById('positionsTableBody');
     if (!wrap || !body) return;
-    if (!Array.isArray(positions) || !positions.length) { wrap.hidden = true; body.innerHTML = ''; return; }
+    if (!Array.isArray(positions) || !positions.length) { body.innerHTML = ''; return; }
     body.closest('table').dataset.positions = JSON.stringify(positions);
     body.innerHTML = positions.map(pos => {
       const pnl = pos.pnl_pct;
@@ -3321,18 +3400,167 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       );
       return row + (pfOpenSymbol === pos.symbol ? pfDetailRowHTML(pos.symbol, color) : '');
     }).join('');
-    wrap.hidden = false;
+  }
+
+  // ============================================================
+  // ORBIT VIEW — an additional visual mode alongside the table, not a
+  // replacement. Positions orbit the portfolio total on 2-3 concentric
+  // lanes; node size = weight in the portfolio, color = up/down, and
+  // clicking a node opens the same per-symbol chart the table rows do.
+  // ============================================================
+  let pfLastPositions = [];
+  let pfLastTotalValue = 0;
+  let pfView = (function () {
+    try { return localStorage.getItem('finance_portfolio_view') === 'orbit' ? 'orbit' : 'table'; }
+    catch (e) { return 'table'; }
+  })();
+
+  function positionWeights(positions) {
+    const withValue = positions.map(pos => {
+      const value = (typeof pos.qty === 'number' && typeof pos.current_price === 'number') ? pos.qty * pos.current_price : 0;
+      return { pos: pos, value: Math.max(0, value) };
+    });
+    const total = withValue.reduce((s, w) => s + w.value, 0) || 1;
+    return withValue.map(w => Object.assign({}, w, { weight: (w.value / total) * 100 }));
+  }
+
+  function renderOrbit(positions, totalValue) {
+    const svg = document.getElementById('orbitSvg');
+    if (!svg) return;
+    if (!Array.isArray(positions) || !positions.length) { svg.innerHTML = ''; return; }
+
+    const weighted = positionWeights(positions);
+    const maxWeight = Math.max.apply(null, weighted.map(function (w) { return w.weight; }).concat([0.0001]));
+    const n = positions.length;
+    const laneCount = n < 8 ? 1 : (n < 15 ? 2 : 3);
+    const cx = 200, cy = 200, coreR = 36;
+    const laneRadii = laneCount === 1 ? [150] : laneCount === 2 ? [105, 165] : [82, 128, 172];
+    const laneDurations = [46, 63, 34]; // seconds — all within the requested 30-70s ambient range
+    const laneDirections = [1, -1, 1];
+
+    const lanes = [];
+    for (let i = 0; i < laneCount; i++) lanes.push([]);
+    weighted.forEach(function (w, i) { lanes[i % laneCount].push(w); });
+
+    const parts = [];
+    laneRadii.forEach(function (r) {
+      parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(63,217,255,0.08)" stroke-width="1"/>');
+    });
+
+    parts.push(
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + coreR + '" fill="rgba(63,217,255,0.06)" stroke="#3fd9ff" stroke-width="1.5">' +
+        '<animate attributeName="opacity" values="0.55;1;0.55" dur="3.2s" repeatCount="indefinite"/>' +
+      '</circle>'
+    );
+    parts.push('<text x="' + cx + '" y="' + (cy - 6) + '" text-anchor="middle" class="orbit-core-label">PORTFOLIO</text>');
+    parts.push('<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" class="orbit-core-value">' + fmtUsd(totalValue).replace('.00', '') + '</text>');
+
+    lanes.forEach(function (laneItems, laneIdx) {
+      if (!laneItems.length) return;
+      const r = laneRadii[laneIdx];
+      const dur = laneDurations[laneIdx % laneDurations.length];
+      const dir = laneDirections[laneIdx % laneDirections.length];
+      const rotFrom = dir === 1 ? ('0 ' + cx + ' ' + cy) : ('360 ' + cx + ' ' + cy);
+      const rotTo   = dir === 1 ? ('360 ' + cx + ' ' + cy) : ('0 ' + cx + ' ' + cy);
+      const counterTo = dir === 1 ? '-360 0 0' : '360 0 0';
+
+      const nodes = laneItems.map(function (w, idx) {
+        // Placed by absolute (x0,y0) via translate only — never a nested
+        // rotate — so the *only* rotation ever applied to a node's local
+        // frame is the lane's own animated spin. That's exactly what the
+        // counter-animateTransform below cancels, so labels stay upright
+        // for every node, not just the one at angle 0.
+        const angle = (360 / laneItems.length) * idx;
+        const theta = (angle * Math.PI) / 180;
+        const x0 = cx + r * Math.cos(theta);
+        const y0 = cy + r * Math.sin(theta);
+        const radius = 4 + (w.weight / maxWeight) * (15 - 4);
+        const isPos = (w.pos.pnl_pct == null) || w.pos.pnl_pct >= 0;
+        const color = isPos ? '#4dd6a8' : '#e0605c';
+        const sym = escapeHtmlPf(w.pos.symbol);
+        return (
+          '<g transform="translate(' + x0.toFixed(1) + ' ' + y0.toFixed(1) + ')">' +
+            '<g class="orbit-node" data-symbol="' + sym + '">' +
+              // Counter-rotates the lane's own spin so the label/circle
+              // never appear to tumble — only orbit position moves.
+              '<animateTransform attributeName="transform" type="rotate" from="0 0 0" to="' + counterTo + '" dur="' + dur + 's" repeatCount="indefinite"/>' +
+              '<circle r="' + radius.toFixed(1) + '" fill="rgba(2,4,10,0.7)" stroke="' + color + '" stroke-width="2"/>' +
+              '<text y="' + (radius + 11) + '" text-anchor="middle" class="orbit-node-label" fill="' + color + '">' + sym + '</text>' +
+            '</g>' +
+          '</g>'
+        );
+      }).join('');
+
+      parts.push(
+        '<g>' +
+          '<animateTransform attributeName="transform" type="rotate" from="' + rotFrom + '" to="' + rotTo + '" dur="' + dur + 's" repeatCount="indefinite"/>' +
+          nodes +
+        '</g>'
+      );
+    });
+
+    svg.innerHTML = parts.join('');
+  }
+
+  function renderOrbitDetail() {
+    const holder = document.getElementById('orbitDetailHolder');
+    if (!holder) return;
+    if (!pfOpenSymbol) { holder.innerHTML = ''; return; }
+    const pos = pfLastPositions.find(function (p) { return p.symbol === pfOpenSymbol; });
+    const color = (!pos || pos.pnl_pct == null || pos.pnl_pct >= 0) ? '#4dd6a8' : '#e0605c';
+    holder.innerHTML = (
+      '<div class="pf-detail-inner pf-orbit-detail">' +
+        '<div class="pf-detail-head-row">' +
+          '<span class="pf-detail-head-symbol">' + escapeHtmlPf(pfOpenSymbol) + '</span>' +
+          '<button type="button" class="pf-detail-close-btn" id="orbitDetailClose">‹ back</button>' +
+        '</div>' +
+        pfDetailBodyHTML(pfOpenSymbol, color) +
+      '</div>'
+    );
+    const closeBtn = document.getElementById('orbitDetailClose');
+    if (closeBtn) closeBtn.addEventListener('click', function () { pfOpenSymbol = null; refreshOpenDetail(); });
+  }
+
+  function refreshOpenDetail() {
+    renderPositions(pfLastPositions);
+    renderOrbitDetail();
+  }
+
+  function applyPfView() {
+    const toggle = document.getElementById('pfViewToggle');
+    const tableWrap = document.getElementById('positionsTableWrap');
+    const orbitWrap = document.getElementById('orbitViewWrap');
+    const hasPositions = pfLastPositions.length > 0;
+    if (toggle) {
+      toggle.hidden = !hasPositions;
+      toggle.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.view === pfView); });
+    }
+    if (tableWrap) tableWrap.hidden = !hasPositions || pfView !== 'table';
+    if (orbitWrap) orbitWrap.hidden = !hasPositions || pfView !== 'orbit';
+    if (hasPositions && pfView === 'orbit') {
+      renderOrbit(pfLastPositions, pfLastTotalValue);
+      renderOrbitDetail();
+    }
+  }
+
+  const pfViewToggleEl = document.getElementById('pfViewToggle');
+  if (pfViewToggleEl) {
+    pfViewToggleEl.addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-view]');
+      if (!btn) return;
+      pfView = btn.dataset.view;
+      try { localStorage.setItem('finance_portfolio_view', pfView); } catch (err) { /* ignore */ }
+      applyPfView();
+    });
   }
 
   document.addEventListener('click', function (e) {
     const row = e.target.closest('.pf-pos-row');
-    if (!row) return;
-    const symbol = row.dataset.symbol;
+    const node = !row ? e.target.closest('.orbit-node') : null;
+    if (!row && !node) return;
+    const symbol = row ? row.dataset.symbol : node.dataset.symbol;
     pfOpenSymbol = pfOpenSymbol === symbol ? null : symbol;
-    const positionsRaw = row.closest('table') && row.closest('table').dataset.positions;
-    try {
-      renderPositions(JSON.parse(positionsRaw || '[]'));
-    } catch (err) { /* ignore — table just won't re-render this click */ }
+    refreshOpenDetail();
   });
 
   // Real trend line from value_history (day-bucketed portfolio value) —
@@ -3422,7 +3650,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
       renderPfChart(p.value_history, isPos ? '#4dd6a8' : '#e0605c');
       pfPositionsHistory = (p.positions_history && typeof p.positions_history === 'object') ? p.positions_history : {};
-      renderPositions(p.positions);
+      pfLastPositions = Array.isArray(p.positions) ? p.positions : [];
+      pfLastTotalValue = totalValue;
+      renderPositions(pfLastPositions);
+      applyPfView();
 
       // Cash to trade — reuses the same cash_balance already folded into
       // the portfolio total above.
