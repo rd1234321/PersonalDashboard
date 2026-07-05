@@ -1359,6 +1359,10 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   font-family: var(--font-mono); font-size: 9px; font-weight: 700;
   letter-spacing: 0.04em; pointer-events: none;
 }
+.orbit-node-value {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 600;
+  letter-spacing: 0.02em; pointer-events: none; fill: var(--text-tertiary);
+}
 .pf-orbit-legend {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   padding: 10px 14px 14px;
@@ -3460,6 +3464,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         const isPos = (w.pos.pnl_pct == null) || w.pos.pnl_pct >= 0;
         const color = isPos ? '#4dd6a8' : '#e0605c';
         const sym = escapeHtmlPf(w.pos.symbol);
+        const valueLabel = fmtUsd(w.value);
         return (
           '<g transform="translate(' + x0.toFixed(1) + ' ' + y0.toFixed(1) + ')">' +
             '<g class="orbit-node" data-symbol="' + sym + '">' +
@@ -3468,6 +3473,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
               '<animateTransform attributeName="transform" type="rotate" from="0 0 0" to="' + counterTo + '" dur="' + dur + 's" repeatCount="indefinite"/>' +
               '<circle r="' + radius.toFixed(1) + '" fill="rgba(2,4,10,0.7)" stroke="' + color + '" stroke-width="2"/>' +
               '<text y="' + (radius + 11) + '" text-anchor="middle" class="orbit-node-label" fill="' + color + '">' + sym + '</text>' +
+              '<text y="' + (radius + 22) + '" text-anchor="middle" class="orbit-node-value">' + valueLabel + '</text>' +
             '</g>' +
           '</g>'
         );
