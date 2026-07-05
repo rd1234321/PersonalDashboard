@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050a0f">
-<title>Caffeine · Dashboard</title>
+<title>Caffeine & Sleep · Dashboard</title>
 
 <link rel="stylesheet" href="hud-theme.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -137,6 +137,24 @@ body {
 .daily-msg.good { color: var(--success); } .daily-msg.warn { color: var(--warning); } .daily-msg.bad { color: var(--danger); }
 .daily-note { font-size: 12px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.5; }
 
+/* ===== Sleep log ===== */
+.sleep-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-top: 4px; }
+.sleep-field { flex: 1; min-width: 160px; }
+.sleep-field label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 6px; }
+.sleep-input {
+  width: 100%; padding: 11px 12px; border: 1px solid rgba(74,107,120,0.3); border-radius: 0;
+  background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none;
+  transition: border-color 0.2s, background 0.2s; color-scheme: dark;
+}
+.sleep-input:focus { border-color: rgba(240,168,60,0.5); background: rgba(0,0,0,0.36); }
+.sleep-add-btn {
+  flex-shrink: 0; padding: 11px 18px; border: 1px solid var(--hud-amber); border-radius: 0;
+  background: var(--hud-amber); color: var(--hud-bg);
+  font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; cursor: pointer;
+  transition: transform 0.1s, filter 0.15s; white-space: nowrap;
+}
+.sleep-add-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
 /* ===== Log list ===== */
 .log-list { list-style: none; margin: 0; padding: 0; }
 .empty-state { text-align: center; font-size: 12px; font-style: italic; color: var(--text-tertiary); padding: 16px 0; }
@@ -163,7 +181,7 @@ body {
 <body class="hud-grid">
 <div class="page">
 
-  <h1 class="dash-title">Caffeine</h1>
+  <h1 class="dash-title">Caffeine &amp; Sleep</h1>
 
   <!-- ENERGY CURVE -->
   <div class="section">
@@ -215,6 +233,34 @@ body {
         <div class="mini cutoff"><div class="k">Coffee cutoff</div><div class="v" id="mCutoff">—</div><div class="s" id="mCutoffSub"></div></div>
       </div>
       <ul class="tips" id="tips"></ul>
+    </div>
+  </div>
+
+  <!-- SLEEP LOG -->
+  <div class="section">
+    <div class="section-title">Sleep</div>
+    <div class="gm-card">
+      <div class="daily-head" style="margin-bottom: 4px;">
+        <div class="daily-info">
+          <div class="daily-top">
+            <span class="daily-num" id="sleepHoursNum" style="font-size:28px">—</span>
+            <span class="daily-unit">last night</span>
+          </div>
+          <div class="daily-msg good" id="sleepMsg">Log your sleep to personalize the energy curve above.</div>
+        </div>
+      </div>
+      <div class="sleep-row">
+        <div class="sleep-field">
+          <label for="sleepStart">Fell asleep</label>
+          <input class="sleep-input" id="sleepStart" type="datetime-local">
+        </div>
+        <div class="sleep-field">
+          <label for="sleepEnd">Woke up</label>
+          <input class="sleep-input" id="sleepEnd" type="datetime-local">
+        </div>
+        <button class="sleep-add-btn" id="sleepAdd" type="button">Log Night</button>
+      </div>
+      <ul class="log-list" id="sleepLogList" style="margin-top: 14px;"></ul>
     </div>
   </div>
 
@@ -270,14 +316,15 @@ body {
   const HALF_LIFE_H = 5, PEAK_MIN = 45, FDA_MAX = 400;
 
   /* ============ Storage ============ */
-  const LOGS_KEY='caf:logs';
+  const LOGS_KEY='caf:logs', SLEEP_KEY='caf:sleep_logs';
   function loadJSON(k,f){ try { return JSON.parse(localStorage.getItem(k)) || f; } catch(e){ return f; } }
   function saveJSON(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
   let logs = loadJSON(LOGS_KEY, []);
+  let sleepLogs = loadJSON(SLEEP_KEY, []); // [{id, sleepTs, wakeTs}], newest first
 
   /* ============ Personal data ============ */
   let bodyKg = null;
-  let wakeHour = 7, bedHour = 23;   // defaults
+  let wakeHour = 7, bedHour = 23;   // defaults, overridden by the most recent sleep log
   function readProfile() {
     const w = loadJSON('po_water_v1', null);
     if (w && w.profile && w.profile.weightKg) {
@@ -509,7 +556,75 @@ body {
     });
   }
 
-  function renderAll(){ renderRing(); renderChart(); renderPlan(); renderDaily(); renderLog(); }
+  /* ============ Sleep log ============ */
+  function fmtDur(ms){ const h=Math.floor(ms/3600000), m=Math.round((ms%3600000)/60000); return h+'h '+String(m).padStart(2,'0')+'m'; }
+  function latestSleepLog(){ return sleepLogs.length ? sleepLogs[0] : null; } // kept sorted newest-first
+  // The rest of the page's circadian/energy model reads wakeHour/bedHour —
+  // this is what actually personalizes it from hardcoded 7am/11pm defaults
+  // to whatever you last logged.
+  function applySleepToModel(){
+    const l = latestSleepLog();
+    if(!l) return;
+    const w=new Date(l.wakeTs), s=new Date(l.sleepTs);
+    wakeHour = w.getHours()+w.getMinutes()/60;
+    bedHour = s.getHours()+s.getMinutes()/60;
+  }
+  function toLocalInputValue(d){
+    const pad=n=>String(n).padStart(2,'0');
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  function defaultSleepInputs(){
+    const wake=new Date(); wake.setHours(7,0,0,0);
+    const bed=new Date(); bed.setDate(bed.getDate()-1); bed.setHours(23,0,0,0);
+    if($('sleepStart')) $('sleepStart').value = toLocalInputValue(bed);
+    if($('sleepEnd')) $('sleepEnd').value = toLocalInputValue(wake);
+  }
+  function addSleepLog(){
+    const sv=$('sleepStart').value, wv=$('sleepEnd').value;
+    if(!sv || !wv) return;
+    const sleepTs=new Date(sv).getTime(), wakeTs=new Date(wv).getTime();
+    if(!(wakeTs>sleepTs)) return; // wake must be after sleep
+    sleepLogs.push({ id:'s'+Date.now(), sleepTs, wakeTs });
+    sleepLogs.sort((a,b)=>b.wakeTs-a.wakeTs);
+    sleepLogs = sleepLogs.slice(0,30);
+    saveJSON(SLEEP_KEY, sleepLogs);
+    applySleepToModel();
+    renderAll();
+  }
+  function renderSleep(){
+    const numEl=$('sleepHoursNum'), msgEl=$('sleepMsg'), listEl=$('sleepLogList');
+    if(!numEl || !msgEl || !listEl) return;
+    const l = latestSleepLog();
+    if(l){
+      const dur=l.wakeTs-l.sleepTs, hrs=dur/3600000;
+      numEl.textContent = fmtDur(dur);
+      msgEl.className = 'daily-msg ' + (hrs>=7?'good':hrs>=6?'warn':'bad');
+      msgEl.textContent = hrs>=7
+        ? 'Solid night — the energy curve above is tuned to your ' + fmtClock(wakeHour) + ' wake time.'
+        : (hrs>=6 ? 'A little short — expect an earlier afternoon dip today.' : 'Short night — expect a rougher crash today.');
+    } else {
+      numEl.textContent = '—';
+      msgEl.className = 'daily-msg good';
+      msgEl.textContent = 'Log your sleep to personalize the energy curve above.';
+    }
+    if(!sleepLogs.length){ listEl.innerHTML = '<li class="empty-state">No sleep logged yet.</li>'; return; }
+    listEl.innerHTML = sleepLogs.slice(0,7).map(l=>{
+      const dur=l.wakeTs-l.sleepTs;
+      return '<li class="log-row"><span class="log-emoji">🌙</span><div class="log-main"><div class="log-name">'+fmtDur(dur)+'</div>'
+        +'<div class="log-meta">'+fmtTime(l.sleepTs)+' → '+fmtTime(l.wakeTs)+'</div></div>'
+        +'<button class="log-del" type="button" data-id="'+l.id+'" aria-label="Delete">×</button></li>';
+    }).join('');
+  }
+  $('sleepLogList').addEventListener('click',(e)=>{
+    const btn=e.target.closest('.log-del'); if(!btn) return;
+    sleepLogs = sleepLogs.filter(x=>x.id!==btn.dataset.id);
+    saveJSON(SLEEP_KEY, sleepLogs);
+    applySleepToModel();
+    renderAll();
+  });
+  $('sleepAdd').addEventListener('click', addSleepLog);
+
+  function renderAll(){ renderRing(); renderChart(); renderPlan(); renderDaily(); renderLog(); renderSleep(); }
 
   /* ============ Scrub interaction ============ */
   function scrubFromEvent(e){
@@ -530,13 +645,15 @@ body {
     chartMode=b.dataset.m; $('modeToggle').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderChart();
   }));
   readProfile();
+  defaultSleepInputs();
+  applySleepToModel();
   renderAll();
   setInterval(()=>{ if(scrubT==null) renderAll(); }, 60000);
 
   /* ============ Cloud sync ============ */
   if(window.initCloudSync){
-    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY],
-      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); renderAll(); } });
+    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY, SLEEP_KEY],
+      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); sleepLogs=loadJSON(SLEEP_KEY,[]); applySleepToModel(); renderAll(); } });
   }
 
   // Exposed so the separate Apple Health sync <script> below (a different
