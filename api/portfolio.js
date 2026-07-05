@@ -34,7 +34,11 @@
 //     "watchlist": [                         (optional)
 //       { "symbol": string, "current_price": number, "target_price": number | null }, ...
 //     ],
-//     "exposure": { "tech": 34, "health": 21, ... }   (optional — percentages)
+//     "exposure": { "tech": 34, "health": 21, ... },  (optional — percentages)
+//     "risk": {                              (optional)
+//       "concentration_pct": number, "largest_position": string,
+//       "volatility_pct": number
+//     }
 //   }
 //
 // Each position's current_price is also appended to a per-symbol
@@ -90,6 +94,16 @@ function sanitizeExposure(exposure) {
   return Object.keys(clean).length ? clean : null;
 }
 
+function sanitizeRisk(risk) {
+  if (!risk || typeof risk !== 'object' || Array.isArray(risk)) return null;
+  const clean = {
+    concentration_pct: typeof risk.concentration_pct === 'number' ? risk.concentration_pct : null,
+    largest_position: typeof risk.largest_position === 'string' ? risk.largest_position.trim().slice(0, 20) : null,
+    volatility_pct: typeof risk.volatility_pct === 'number' ? risk.volatility_pct : null,
+  };
+  return (clean.concentration_pct != null || clean.largest_position != null || clean.volatility_pct != null) ? clean : null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -136,6 +150,7 @@ export default async function handler(req, res) {
   const incomingPositions = sanitizePositions(body.positions);
   const incomingWatchlist = sanitizeWatchlist(body.watchlist);
   const incomingExposure = sanitizeExposure(body.exposure);
+  const incomingRisk = sanitizeRisk(body.risk);
   const portfolioValue = body.portfolio_value != null ? body.portfolio_value : existing.portfolio_value;
   const cashBalance = body.cash_balance != null ? body.cash_balance : (typeof existing.cash_balance === 'number' ? existing.cash_balance : 0);
 
@@ -194,10 +209,12 @@ export default async function handler(req, res) {
     positions_history: positionsHistory,
     watchlist: incomingWatchlist != null ? incomingWatchlist : (existing.watchlist || undefined),
     exposure: incomingExposure != null ? incomingExposure : (existing.exposure || undefined),
+    risk: incomingRisk != null ? incomingRisk : (existing.risk || undefined),
   };
   if (payload.positions === undefined) delete payload.positions;
   if (payload.watchlist === undefined) delete payload.watchlist;
   if (payload.exposure === undefined) delete payload.exposure;
+  if (payload.risk === undefined) delete payload.risk;
 
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/app_state?on_conflict=key', {

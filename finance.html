@@ -1798,18 +1798,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     </div>
   </div>
 
-  <!-- ===== RIGHT COLUMN: risk (placeholder) / watchlist / next sync (placeholder) ===== -->
+  <!-- ===== RIGHT COLUMN: risk / watchlist / next sync ===== -->
   <div class="pf-col pf-col-right">
-    <div class="pf-tile pf-tile-risk">
+    <div class="pf-tile pf-tile-risk" id="riskTile">
       <div class="pf-tile-label">◆ risk</div>
       <div class="pf-risk-gauge">
         <svg viewBox="0 0 120 68" class="pf-risk-svg">
           <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="rgba(63,217,255,0.10)" stroke-width="10" stroke-linecap="round"/>
-          <path d="M 10 60 A 50 50 0 0 1 70 12" fill="none" stroke="#f0a83c" stroke-width="10" stroke-linecap="round"/>
+          <path id="riskGaugeArc" d="M 10 60 A 50 50 0 0 1 70 12" fill="none" stroke="#f0a83c" stroke-width="10" stroke-linecap="round"/>
         </svg>
-        <div class="pf-risk-label">med</div>
+        <div class="pf-risk-label" id="riskGaugeLabel">med</div>
       </div>
-      <div class="pf-tile-sub">Not wired up yet</div>
+      <div class="pf-tile-sub" id="riskDetail">Not wired up yet</div>
     </div>
 
     <div class="pf-tile" id="watchlistTile" hidden>
@@ -1823,8 +1823,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
     <div class="pf-tile">
       <div class="pf-tile-label">◆ next sync</div>
-      <div class="pf-tile-big" style="font-size:22px">—</div>
-      <div class="pf-tile-sub">Not wired up yet</div>
+      <div class="pf-tile-big" id="nextSyncValue" style="font-size:22px">—</div>
+      <div class="pf-tile-sub" id="nextSyncSub">Not wired up yet</div>
     </div>
   </div>
 
@@ -3501,6 +3501,51 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         } else {
           watchlistTile.hidden = true;
           watchlistEmptyTile.hidden = false;
+        }
+      }
+
+      // Risk — volatility_pct drives the low/med/high gauge; concentration
+      // + largest position show as supporting detail text underneath.
+      const risk = p.risk;
+      if (risk && (risk.volatility_pct != null || risk.concentration_pct != null || risk.largest_position != null)) {
+        const vol = typeof risk.volatility_pct === 'number' ? risk.volatility_pct : null;
+        let level = 'med', color = '#f0a83c';
+        if (vol != null) {
+          if (vol < 30) { level = 'low'; color = '#4dd6a8'; }
+          else if (vol < 60) { level = 'med'; color = '#f0a83c'; }
+          else { level = 'high'; color = '#e0605c'; }
+        }
+        const gaugeLabel = document.getElementById('riskGaugeLabel');
+        const gaugeArc = document.getElementById('riskGaugeArc');
+        if (gaugeLabel) gaugeLabel.textContent = level;
+        if (gaugeArc) {
+          const pct = vol == null ? 50 : Math.max(0, Math.min(100, vol));
+          const theta = Math.PI * (1 - pct / 100); // 180deg (pct=0) -> 0deg (pct=100)
+          const x = 60 + 50 * Math.cos(theta);
+          const y = 60 - 50 * Math.sin(theta);
+          const largeArc = pct > 50 ? 1 : 0;
+          gaugeArc.setAttribute('d', 'M 10 60 A 50 50 0 ' + largeArc + ' 1 ' + x.toFixed(1) + ' ' + y.toFixed(1));
+          gaugeArc.setAttribute('stroke', color);
+        }
+        const detailEl = document.getElementById('riskDetail');
+        if (detailEl) {
+          const parts = [];
+          if (risk.concentration_pct != null) parts.push(Math.round(risk.concentration_pct * 10) / 10 + '% concentration');
+          if (risk.largest_position) parts.push('largest: ' + risk.largest_position);
+          detailEl.textContent = parts.length ? parts.join(' · ') : 'Not wired up yet';
+        }
+      }
+
+      // Next sync — the payload only ever tells us the last sync time, not
+      // a scheduled next run, so show that instead of pretending we know
+      // when the next one is coming.
+      if (p.synced_at) {
+        const syncedDate = new Date(p.synced_at);
+        if (!isNaN(syncedDate.getTime())) {
+          const nextSyncVal = document.getElementById('nextSyncValue');
+          const nextSyncSub = document.getElementById('nextSyncSub');
+          if (nextSyncVal) nextSyncVal.textContent = syncedDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+          if (nextSyncSub) nextSyncSub.textContent = 'Last synced ' + syncedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         }
       }
     } catch (e) { /* offline or not set up yet — ticker/teaser just stay hidden */ }
