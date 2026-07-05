@@ -3367,7 +3367,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const holder = document.getElementById('pfChartHolder');
     if (!holder) return;
     if (!Array.isArray(history) || history.length < 2) {
-      holder.innerHTML = '<div class="pf-chart-empty">Trend chart fills in after a couple of days of synced snapshots.</div>';
+      holder.innerHTML = '<div class="pf-chart-empty">Trend chart fills in after a couple more synced snapshots.</div>';
       return;
     }
     holder.innerHTML = pfChartSVG(history, color, 640, 110);

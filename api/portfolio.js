@@ -6,9 +6,12 @@
 // and upserts it into the same Supabase app_state table the rest of
 // the dashboard already uses (row key = 'portfolio_summary'). Most
 // fields (value, change, positions, ...) are always the latest snapshot
-// — no merge — but portfolio_value also gets appended to a day-bucketed
-// value_history (same approach as api/apple-health.js) so the dashboard
-// can chart a real trend instead of faking one from a single number.
+// — no merge — but portfolio_value gets appended to value_history on
+// every single POST, keyed by that sync's synced_at timestamp (capped
+// at the most recent 500 points). This is a real per-snapshot series,
+// not a day-bucketed close — sync as often as you like (intraday
+// included) and the chart reflects it, instead of collapsing every
+// sync on the same day down to just the last one.
 //
 // Expected JSON body:
 //   {
@@ -154,27 +157,27 @@ export default async function handler(req, res) {
   const portfolioValue = body.portfolio_value != null ? body.portfolio_value : existing.portfolio_value;
   const cashBalance = body.cash_balance != null ? body.cash_balance : (typeof existing.cash_balance === 'number' ? existing.cash_balance : 0);
 
-  // One point per calendar day (last sync of the day wins), capped at 60 —
-  // same shape/approach as api/apple-health.js's history, so the dashboard
-  // can chart a real trend line instead of faking one from a single value.
-  // Buckets the TOTAL (positions + cash) so the trend line matches the
-  // total the dashboard actually displays.
-  const today = new Date().toISOString().slice(0, 10);
+  // Every sync appends its own point (keyed by this sync's synced_at
+  // timestamp, not just its calendar day) so the chart is a real record of
+  // what was actually reported at each sync — not a day-bucketed close
+  // that silently throws away every intraday reading but the last one.
+  // Capped at 500 points (~a few weeks of hourly syncs, or a long stretch
+  // of daily ones) so the row doesn't grow without bound.
+  const HISTORY_CAP = 500;
+  const nowIso = body.synced_at || new Date().toISOString();
   const priorHistory = Array.isArray(existing.value_history) ? existing.value_history : [];
   let valueHistory = priorHistory;
   if (typeof portfolioValue === 'number') {
-    const byDay = new Map(priorHistory.map(p => [p.date, p.value]));
-    byDay.set(today, portfolioValue + (cashBalance || 0));
-    valueHistory = Array.from(byDay.entries())
-      .map(([date, value]) => ({ date, value }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(-60);
+    valueHistory = priorHistory
+      .concat([{ date: nowIso, value: portfolioValue + (cashBalance || 0) }])
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(-HISTORY_CAP);
   }
 
-  // Same day-bucketed history, but per symbol (current_price each sync) so
-  // each position can get its own real trend chart. Only kept for symbols
-  // present in the latest positions payload — a closed/removed position's
-  // history isn't carried forward indefinitely.
+  // Same per-snapshot accumulation, but per symbol (current_price each
+  // sync) so each position can get its own real trend chart. Only kept
+  // for symbols present in the latest positions payload — a closed/
+  // removed position's history isn't carried forward indefinitely.
   const priorPositionsHistory = (existing.positions_history && typeof existing.positions_history === 'object')
     ? existing.positions_history : {};
   let positionsHistory = priorPositionsHistory;
@@ -186,12 +189,10 @@ export default async function handler(req, res) {
         continue;
       }
       const prior = Array.isArray(priorPositionsHistory[pos.symbol]) ? priorPositionsHistory[pos.symbol] : [];
-      const byDay = new Map(prior.map(p => [p.date, p.value]));
-      byDay.set(today, pos.current_price);
-      positionsHistory[pos.symbol] = Array.from(byDay.entries())
-        .map(([date, value]) => ({ date, value }))
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(-60);
+      positionsHistory[pos.symbol] = prior
+        .concat([{ date: nowIso, value: pos.current_price }])
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-HISTORY_CAP);
     }
   }
 
