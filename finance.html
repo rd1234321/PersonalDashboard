@@ -1331,21 +1331,6 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .pf-price-src.is-cached { color: var(--text-tertiary); }
 .pf-price-src.is-cached .pf-price-src-dot { background: var(--text-tertiary); }
 
-/* ----- table / orbit view toggle ----- */
-.pf-view-toggle {
-  display: inline-flex; gap: 0; margin-bottom: 12px;
-  border: 1px solid rgba(63,217,255,0.16);
-}
-.pf-view-toggle[hidden] { display: none; }
-.pf-view-toggle button {
-  border: 0; background: transparent; color: var(--text-tertiary);
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.06em; padding: 7px 14px; cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.pf-view-toggle button.on { background: rgba(63,217,255,0.16); color: var(--text-primary); }
-.pf-view-toggle button:hover:not(.on) { background: rgba(63,217,255,0.06); }
-
 /* ----- orbit view ----- */
 .pf-orbit-wrap {
   position: relative;
@@ -1849,11 +1834,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <div id="pfChartHolder"></div>
     </div>
 
-    <div class="pf-view-toggle" id="pfViewToggle" hidden>
-      <button type="button" data-view="table" class="on">☰ Table</button>
-      <button type="button" data-view="orbit">◎ Orbit</button>
-    </div>
-
     <div class="positions-table-wrap" id="positionsTableWrap" hidden>
       <table class="positions-table">
         <thead>
@@ -1863,16 +1843,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         </thead>
         <tbody id="positionsTableBody"></tbody>
       </table>
-    </div>
-
-    <div class="pf-orbit-wrap" id="orbitViewWrap" hidden>
-      <svg id="orbitSvg" viewBox="0 0 400 400" class="orbit-svg" aria-label="Portfolio positions orbiting the total value"></svg>
-      <div class="pf-orbit-legend">
-        <span class="pf-orbit-legend-item"><span class="pf-orbit-dot pos"></span>gaining</span>
-        <span class="pf-orbit-legend-item"><span class="pf-orbit-dot neg"></span>losing</span>
-        <span class="pf-orbit-legend-note">size = weight in portfolio</span>
-      </div>
-      <div id="orbitDetailHolder"></div>
     </div>
   </div>
 
@@ -1906,6 +1876,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     </div>
   </div>
 
+</div>
+
+<!-- ===== ORBIT VIEW — its own section below everything else, always
+     alongside (not instead of) the positions table above ===== -->
+<div class="section-title" id="orbitSectionTitle" hidden>
+  <span class="section-title-text">POSITIONS ORBIT</span>
+</div>
+<div class="pf-orbit-wrap" id="orbitViewWrap" hidden>
+  <svg id="orbitSvg" viewBox="0 0 400 400" class="orbit-svg" aria-label="Portfolio positions orbiting the total value"></svg>
+  <div class="pf-orbit-legend">
+    <span class="pf-orbit-legend-item"><span class="pf-orbit-dot pos"></span>gaining</span>
+    <span class="pf-orbit-legend-item"><span class="pf-orbit-dot neg"></span>losing</span>
+    <span class="pf-orbit-legend-note">size = weight in portfolio</span>
+  </div>
+  <div id="orbitDetailHolder"></div>
 </div>
 
 </div>
@@ -3372,7 +3357,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const wrap = document.getElementById('positionsTableWrap');
     const body = document.getElementById('positionsTableBody');
     if (!wrap || !body) return;
-    if (!Array.isArray(positions) || !positions.length) { body.innerHTML = ''; return; }
+    if (!Array.isArray(positions) || !positions.length) { wrap.hidden = true; body.innerHTML = ''; return; }
+    wrap.hidden = false;
     body.closest('table').dataset.positions = JSON.stringify(positions);
     body.innerHTML = positions.map(pos => {
       const pnl = pos.pnl_pct;
@@ -3410,10 +3396,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // ============================================================
   let pfLastPositions = [];
   let pfLastTotalValue = 0;
-  let pfView = (function () {
-    try { return localStorage.getItem('finance_portfolio_view') === 'orbit' ? 'orbit' : 'table'; }
-    catch (e) { return 'table'; }
-  })();
 
   function positionWeights(positions) {
     const withValue = positions.map(pos => {
@@ -3526,32 +3508,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     renderOrbitDetail();
   }
 
+  // Table and orbit are two independent, always-visible sections (not a
+  // toggle) — this just shows/hides each based on whether there's any
+  // position data to show at all, and (re)draws the orbit alongside it.
   function applyPfView() {
-    const toggle = document.getElementById('pfViewToggle');
-    const tableWrap = document.getElementById('positionsTableWrap');
+    const orbitTitle = document.getElementById('orbitSectionTitle');
     const orbitWrap = document.getElementById('orbitViewWrap');
     const hasPositions = pfLastPositions.length > 0;
-    if (toggle) {
-      toggle.hidden = !hasPositions;
-      toggle.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.view === pfView); });
-    }
-    if (tableWrap) tableWrap.hidden = !hasPositions || pfView !== 'table';
-    if (orbitWrap) orbitWrap.hidden = !hasPositions || pfView !== 'orbit';
-    if (hasPositions && pfView === 'orbit') {
+    if (orbitTitle) orbitTitle.hidden = !hasPositions;
+    if (orbitWrap) orbitWrap.hidden = !hasPositions;
+    if (hasPositions) {
       renderOrbit(pfLastPositions, pfLastTotalValue);
       renderOrbitDetail();
     }
-  }
-
-  const pfViewToggleEl = document.getElementById('pfViewToggle');
-  if (pfViewToggleEl) {
-    pfViewToggleEl.addEventListener('click', function (e) {
-      const btn = e.target.closest('button[data-view]');
-      if (!btn) return;
-      pfView = btn.dataset.view;
-      try { localStorage.setItem('finance_portfolio_view', pfView); } catch (err) { /* ignore */ }
-      applyPfView();
-    });
   }
 
   document.addEventListener('click', function (e) {
