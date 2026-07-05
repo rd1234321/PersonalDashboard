@@ -398,8 +398,26 @@ main {
       'distance_walking_running', 'distance_cycling', 'distance_swimming',
       'swimming_stroke_count', 'push_count', 'dietary_energy', 'water',
       'protein', 'carbohydrates', 'total_fat', 'saturated_fat',
-      'dietary_sugar', 'dietary_fiber', 'dietary_sodium', 'dietary_water',
+      'dietary_sugar', 'dietary_fiber', 'sodium', 'dietary_water',
     ]);
+    // Food/nutrition metrics now live on their own Nutrition page (inside
+    // the water tracker), not here — filtered out of this grid entirely
+    // rather than shown twice. Covers every nutrient Health Auto Export
+    // can send (macros, minerals, vitamins), not just the ones with a
+    // dedicated Nutrition field.
+    const AH_FOOD_METRICS = new Set([
+      'dietary_energy', 'protein', 'carbohydrates', 'total_fat', 'saturated_fat',
+      'dietary_sugar', 'dietary_fiber', 'sodium', 'dietary_water', 'cholesterol',
+      'calcium', 'magnesium', 'potassium', 'zinc', 'iron', 'copper', 'phosphorus',
+      'selenium', 'manganese', 'chromium', 'molybdenum', 'caffeine',
+      'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+      'vitamin_b1_thiamine', 'vitamin_b2_riboflavin', 'vitamin_b3_niacin',
+      'vitamin_b5_pantothenic_acid', 'vitamin_b6_pyridoxine', 'vitamin_b7_biotin',
+      'vitamin_b9_folate', 'vitamin_b12',
+    ]);
+    function isFoodMetric(name) {
+      return AH_FOOD_METRICS.has(name) || name.indexOf('dietary_') === 0 || name.indexOf('vitamin_') === 0;
+    }
     let ahRange = 'day';
     let ahLastMetrics = null;
 
@@ -609,7 +627,7 @@ main {
     function toggleDetail(name) {
       if (!ahLastMetrics || !ahLastMetrics[name]) return;
       ahOpenDetail = ahOpenDetail === name ? null : name;
-      const entries = Object.entries(ahLastMetrics).sort(metricOrder);
+      const entries = Object.entries(ahLastMetrics).filter(([n]) => !isFoodMetric(n)).sort(metricOrder);
       const vitals = entries.slice(0, AH_VITAL_COUNT);
       const rest = entries.filter((_, i) => i >= AH_VITAL_COUNT);
       renderVitals(vitals);
@@ -618,7 +636,7 @@ main {
 
     function renderMetrics(metrics) {
       ahLastMetrics = metrics;
-      const entries = Object.entries(metrics).sort(metricOrder);
+      const entries = Object.entries(metrics).filter(([n]) => !isFoodMetric(n)).sort(metricOrder);
       if (!entries.length) return;
       // If the metric whose detail was open no longer exists, close it.
       if (ahOpenDetail && !metrics[ahOpenDetail]) ahOpenDetail = null;

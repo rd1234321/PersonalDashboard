@@ -867,8 +867,13 @@ body {
     if (!state) return { done: 0, total: 0 };
     const goals = state.goals || {};
     const total = goals.calories || 0;
-    const entries = (state.logs || {})[calendarDateKey()] || [];
-    const done = entries.reduce((s, e) => s + (e && e.cal || 0), 0);
+    // Prefer today's Apple Health sync (po-water.html writes this out when
+    // it picks up a MyNetDiary sync) over the manual food log, same
+    // priority the Nutrition page itself uses.
+    const synced = state.synced_today;
+    const done = (synced && synced.date === calendarDateKey())
+      ? (synced.cal || 0)
+      : ((state.logs || {})[calendarDateKey()] || []).reduce((s, e) => s + (e && e.cal || 0), 0);
     return { done: Math.round(done), total };
   }
 

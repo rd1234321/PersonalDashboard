@@ -1428,6 +1428,12 @@ html, body {
 
   renderNutrition();
   window.__renderNutrition = renderNutrition; // hook for the Apple Health sync block below
+  // Also a hook — nState/saveNutri are private to this closure, so the
+  // Apple Health sync block (a separate <script>) can't touch them directly.
+  window.__saveSyncedNutrition = function (obj) {
+    nState.synced_today = obj;
+    saveNutri();
+  };
 })();
 </script>
 
@@ -1520,7 +1526,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const carbs = metrics.carbohydrates;
       const fat = metrics.total_fat;
       const sugar = metrics.dietary_sugar;
-      const sodium = metrics.dietary_sodium;
+      const sodium = metrics.sodium;
       if (cal && cal.date === today) {
         window.__ahSyncedNutrition = {
           cal: cal.value || 0,
@@ -1530,6 +1536,13 @@ document.addEventListener('DOMContentLoaded', function () {
           sugar: (sugar && sugar.date === today) ? sugar.value : 0,
           sodium: (sodium && sodium.date === today) ? sodium.value : 0,
         };
+        // Also persist to localStorage (not just this page's in-memory
+        // state) so the main dashboard's Nutrition dial — which reads
+        // nutrition_v1 directly and has no way to hit Apple Health itself
+        // — shows the same synced total instead of always reading 0.
+        if (window.__saveSyncedNutrition) {
+          window.__saveSyncedNutrition(Object.assign({ date: today }, window.__ahSyncedNutrition));
+        }
         const badge = document.getElementById('nutriSyncWhen');
         if (badge) badge.textContent = relTime(updatedAt);
         if (window.__renderNutrition) window.__renderNutrition();

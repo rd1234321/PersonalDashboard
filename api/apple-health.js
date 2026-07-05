@@ -54,7 +54,7 @@ const FRIENDLY = {
   saturated_fat: 'Saturated Fat',
   dietary_sugar: 'Sugar',
   dietary_fiber: 'Fiber',
-  dietary_sodium: 'Sodium',
+  sodium: 'Sodium',
   dietary_water: 'Water',
 };
 
@@ -85,7 +85,7 @@ const SUM_METRICS = new Set([
   'distance_walking_running', 'distance_cycling', 'distance_swimming',
   'swimming_stroke_count', 'push_count', 'dietary_energy', 'water',
   'protein', 'carbohydrates', 'total_fat', 'saturated_fat',
-  'dietary_sugar', 'dietary_fiber', 'dietary_sodium', 'dietary_water',
+  'dietary_sugar', 'dietary_fiber', 'sodium', 'dietary_water',
 ]);
 
 function dayKey(dateStr) {
