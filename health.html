@@ -343,6 +343,49 @@ main {
     .ah-detail-stat-val { font-size:16px; font-weight:700; color:var(--text-primary); font-variant-numeric:tabular-nums; }
     .ah-detail-trend { font-size:12px; font-family:var(--font-mono); color:var(--text-tertiary); margin-top:10px; }
     .ah-detail-empty { font-size:12px; color:var(--text-tertiary); line-height:1.6; margin-top:10px; }
+    .ah-detail-support { font-size:11.5px; color:var(--text-tertiary); font-family:var(--font-mono); margin-top:8px; }
+
+    /* ----- vitals waveform — Health's own visual identity: a pulse/EKG
+       motif instead of Finance's orbiting-node theme. Purely a status
+       indicator (doesn't plot real data), so it's fine that the line
+       shape is decorative. ----- */
+    .ah-waveform-card {
+      position: relative;
+      background: rgba(77,214,168,0.03);
+      padding: 14px 16px 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .ah-waveform-card::before, .ah-waveform-card::after {
+      content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+      animation: ah-corner-pulse-c 3.4s ease-in-out infinite;
+    }
+    .ah-waveform-card::before { top:0; left:0; border-top:1px solid var(--hud-teal); border-left:1px solid var(--hud-teal); }
+    .ah-waveform-card::after  { bottom:0; right:0; border-bottom:1px solid var(--hud-teal); border-right:1px solid var(--hud-teal); animation-delay: 1.1s; }
+    .ah-waveform-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .ah-waveform-label { font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:0.12em; color:var(--text-tertiary); }
+    .ah-waveform-status { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:0.12em; color:var(--hud-teal); }
+    .ah-waveform-status-dot { width:6px; height:6px; border-radius:50%; background:var(--hud-teal); animation: hud-pulse 2.2s ease-in-out infinite; }
+    .ah-waveform-wrap { position:relative; width:100%; height:56px; overflow:hidden; }
+    .ah-waveform-svg { width:100%; height:100%; display:block; }
+    #ahEkgPath {
+      stroke-dasharray: 1700;
+      stroke-dashoffset: 1700;
+      animation: ah-ekg-draw 2s ease-out forwards;
+    }
+    @keyframes ah-ekg-draw { to { stroke-dashoffset: 0; } }
+    #ahScanLine { animation: ah-scan-sweep 4s linear infinite; }
+    @keyframes ah-scan-sweep {
+      from { transform: translateX(0); }
+      to   { transform: translateX(600px); }
+    }
+
+    .ah-section-title {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.14em; color: var(--text-tertiary);
+      margin: 16px 2px 10px;
+    }
+    .ah-section-title[hidden] { display: none; }
 
     @media (max-width:480px) {
       .ah-grid { grid-template-columns: repeat(2, 1fr); }
@@ -372,8 +415,29 @@ main {
           <button id="ahRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
         </div>
       </div>
+      <div class="ah-waveform-card">
+        <div class="ah-waveform-head">
+          <span class="ah-waveform-label">◆ vitals waveform</span>
+          <span class="ah-waveform-status"><span class="ah-waveform-status-dot"></span>stable</span>
+        </div>
+        <div class="ah-waveform-wrap">
+          <svg viewBox="0 0 600 60" class="ah-waveform-svg" preserveAspectRatio="none" aria-hidden="true">
+            <path id="ahEkgPath" d="M0,30 L55,30 L68,30 L78,10 L88,50 L96,26 L106,30 L120,30 L200,30 L255,30 L268,30 L278,10 L288,50 L296,26 L306,30 L320,30 L400,30 L455,30 L468,30 L478,10 L488,50 L496,26 L506,30 L520,30 L600,30" fill="none" stroke="#4dd6a8" stroke-width="2"/>
+            <rect id="ahScanLine" x="0" y="0" width="2.5" height="60" fill="#3fd9ff" opacity="0.5"/>
+          </svg>
+        </div>
+      </div>
+
       <div id="ahVitals" class="ah-vitals"></div>
-      <div id="ahGrid" class="ah-grid"></div>
+
+      <div class="ah-section-title" id="ahEnergyTitle" hidden>◆ energy and activity</div>
+      <div id="ahEnergyGrid" class="ah-grid"></div>
+
+      <div class="ah-section-title" id="ahMobilityTitle" hidden>◆ mobility and body</div>
+      <div id="ahMobilityGrid" class="ah-grid"></div>
+
+      <div class="ah-section-title" id="ahOtherTitle" hidden>◆ other</div>
+      <div id="ahOtherGrid" class="ah-grid"></div>
     </div>
   </div>
   <script>
@@ -500,9 +564,15 @@ main {
       return ia - ib;
     }
 
-    // How many rings across the top row, and how many secondary tiles get
-    // fed to the trend hero vs. the plain grid below.
-    const AH_VITAL_COUNT = 4;
+    // Explicit key groups per the pulse/waveform redesign — hero vitals
+    // stay as ring gauges, everything else buckets into two labeled
+    // sections (falling through to "other" if new metrics get enabled
+    // later that don't match any named key). Height/weight never show
+    // as standalone tiles: weight is folded into BMI's detail instead.
+    const AH_HERO_KEYS = ['step_count', 'heart_rate', 'heart_rate_variability'];
+    const AH_ENERGY_KEYS = ['active_energy', 'basal_energy_burned', 'flights_climbed', 'apple_stand_time'];
+    const AH_MOBILITY_KEYS = ['walking_heart_rate_average', 'walking_speed', 'walking_step_length', 'body_mass_index'];
+    const AH_HIDDEN_KEYS = new Set(['height', 'weight_body_mass']);
     let ahOpenDetail = null; // name of the metric whose detail panel is open
 
     function ringSVG(points, color, size, stroke) {
@@ -556,18 +626,7 @@ main {
       return (Math.round(n * 100) / 100).toLocaleString();
     }
 
-    // Height comes from Apple Health in cm — this app defaults to US units
-    // everywhere else, so show it as ft/in here too instead of raw cm.
-    function fmtHeightFtIn(cm) {
-      const totalIn = cm / 2.54;
-      const ft = Math.floor(totalIn / 12);
-      const inch = Math.round(totalIn % 12);
-      return ft + "'" + inch + '"';
-    }
     function displayValueUnits(name, m) {
-      if (name === 'height' && typeof m.value === 'number') {
-        return { value: fmtHeightFtIn(m.value), units: '' };
-      }
       return { value: m.value, units: m.units || '' };
     }
 
@@ -591,8 +650,8 @@ main {
       }).join('');
     }
 
-    function renderGrid(entries, colorOffset) {
-      document.getElementById('ahGrid').innerHTML = entries.map(([name, m], i) => {
+    function renderGridInto(containerId, entries, colorOffset) {
+      document.getElementById(containerId).innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
         const dv = displayValueUnits(name, m);
         const card = (
@@ -626,6 +685,11 @@ main {
         body = '<div class="ah-detail-empty">Not enough history yet to chart ' + esc(m.label.toLowerCase()) + ' over time — this fills in as more syncs come in from your phone.</div>';
       }
       const dv = displayValueUnits(name, m);
+      let support = '';
+      if (name === 'body_mass_index' && ahLastMetrics && ahLastMetrics.weight_body_mass) {
+        const wm = ahLastMetrics.weight_body_mass;
+        support = '<div class="ah-detail-support">Weight: ' + esc(wm.value) + ' ' + esc(wm.units || '') + '</div>';
+      }
       return (
         '<div class="ah-detail-row">' +
           '<div class="ah-detail" style="--ah-c:' + color + '">' +
@@ -635,33 +699,54 @@ main {
               '<button type="button" class="ah-detail-close" data-metric="' + esc(name) + '">‹ back</button>' +
             '</div>' +
             body +
+            support +
           '</div>' +
         '</div>'
       );
     }
 
+    // Splits the available metrics into the fixed hero/energy/mobility
+    // groups (by exact key), with anything left over — not food, not
+    // height/weight (those never get a standalone tile) — falling
+    // through to "other".
+    function bucketMetrics(metrics) {
+      const has = n => metrics[n] != null;
+      const pick = keys => keys.filter(has).map(n => [n, metrics[n]]);
+      const used = new Set([...AH_HERO_KEYS, ...AH_ENERGY_KEYS, ...AH_MOBILITY_KEYS, ...AH_HIDDEN_KEYS]);
+      const other = Object.entries(metrics)
+        .filter(([n]) => !isFoodMetric(n) && !used.has(n))
+        .sort(metricOrder);
+      return {
+        hero: pick(AH_HERO_KEYS),
+        energy: pick(AH_ENERGY_KEYS),
+        mobility: pick(AH_MOBILITY_KEYS),
+        other,
+      };
+    }
+
     // Toggles the detail row for a metric open/closed in-place, right where
-    // it was clicked, and re-renders just the grid it lives in.
+    // it was clicked, and re-renders just the group it lives in.
     function toggleDetail(name) {
       if (!ahLastMetrics || !ahLastMetrics[name]) return;
       ahOpenDetail = ahOpenDetail === name ? null : name;
-      const entries = Object.entries(ahLastMetrics).filter(([n]) => !isFoodMetric(n)).sort(metricOrder);
-      const vitals = entries.slice(0, AH_VITAL_COUNT);
-      const rest = entries.filter((_, i) => i >= AH_VITAL_COUNT);
-      renderVitals(vitals);
-      renderGrid(rest, AH_VITAL_COUNT);
+      renderMetrics(ahLastMetrics);
     }
 
     function renderMetrics(metrics) {
       ahLastMetrics = metrics;
-      const entries = Object.entries(metrics).filter(([n]) => !isFoodMetric(n)).sort(metricOrder);
-      if (!entries.length) return;
       // If the metric whose detail was open no longer exists, close it.
       if (ahOpenDetail && !metrics[ahOpenDetail]) ahOpenDetail = null;
-      const vitals = entries.slice(0, AH_VITAL_COUNT);
-      renderVitals(vitals);
-      const rest = entries.slice(AH_VITAL_COUNT);
-      renderGrid(rest, AH_VITAL_COUNT);
+      const groups = bucketMetrics(metrics);
+      renderVitals(groups.hero);
+      renderGridInto('ahEnergyGrid', groups.energy, AH_HERO_KEYS.length);
+      renderGridInto('ahMobilityGrid', groups.mobility, AH_HERO_KEYS.length + AH_ENERGY_KEYS.length);
+      renderGridInto('ahOtherGrid', groups.other, AH_HERO_KEYS.length + AH_ENERGY_KEYS.length + AH_MOBILITY_KEYS.length);
+      const energyTitle = document.getElementById('ahEnergyTitle');
+      if (energyTitle) energyTitle.hidden = !groups.energy.length;
+      const mobilityTitle = document.getElementById('ahMobilityTitle');
+      if (mobilityTitle) mobilityTitle.hidden = !groups.mobility.length;
+      const otherTitle = document.getElementById('ahOtherTitle');
+      if (otherTitle) otherTitle.hidden = !groups.other.length;
     }
 
     document.getElementById('ahVitals').addEventListener('click', e => {
@@ -670,11 +755,15 @@ main {
       const card = e.target.closest('.ah-vital');
       if (card) toggleDetail(card.dataset.metric);
     });
-    document.getElementById('ahGrid').addEventListener('click', e => {
-      const closeBtn = e.target.closest('.ah-detail-close');
-      if (closeBtn) { toggleDetail(closeBtn.dataset.metric); return; }
-      const card = e.target.closest('.ah-metric');
-      if (card) toggleDetail(card.dataset.metric);
+    ['ahEnergyGrid', 'ahMobilityGrid', 'ahOtherGrid'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('click', e => {
+        const closeBtn = e.target.closest('.ah-detail-close');
+        if (closeBtn) { toggleDetail(closeBtn.dataset.metric); return; }
+        const card = e.target.closest('.ah-metric');
+        if (card) toggleDetail(card.dataset.metric);
+      });
     });
 
     const ahRangeSeg = document.getElementById('ahRangeSeg');
