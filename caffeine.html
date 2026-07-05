@@ -37,7 +37,7 @@ body {
   min-height: 100vh; position: relative; overflow-x: hidden;
   padding: max(28px, env(safe-area-inset-top)) 20px 60px;
 }
-.page { max-width: 1100px; margin: 0 auto; }
+.page { max-width: 1400px; margin: 0 auto; }
 .dash-title {
   margin: 0 0 14px; font-size: 28px; font-weight: 700; letter-spacing: 0.02em;
   color: var(--text-primary);
@@ -115,6 +115,15 @@ body {
 .tip { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; border-top: 1px solid rgba(74,107,120,0.2); }
 .tip:first-child { border-top: 0; }
 .tip .ic { flex-shrink: 0; }
+
+.ah-sync-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--success); background: rgba(77,214,168,0.10);
+  border: 1px solid rgba(77,214,168,0.30);
+  padding: 4px 9px; margin-bottom: 12px;
+}
+.ah-sync-badge[hidden] { display: none; }
 
 /* ===== Daily intake ring ===== */
 .daily-head { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
@@ -240,6 +249,7 @@ body {
   <div class="section">
     <div class="section-title">Today</div>
     <div class="gm-card">
+      <div class="ah-sync-badge" id="cafSyncBadge" hidden>🍎 Synced from Apple Health · <span id="cafSyncWhen">just now</span></div>
       <div class="daily-head">
         <div class="hud-ring-wrap" style="width:120px;height:120px">
           <svg class="hud-ring" viewBox="0 0 120 120" width="120" height="120">
@@ -428,7 +438,19 @@ body {
   let scrubT = null; // hovered hour, or null
 
   function todaysLogs(){ const s=startOfToday(); return logs.filter(l=>l.ts>=s); }
-  function dailyTotal(){ return Math.round(todaysLogs().reduce((a,l)=>a+l.mg,0)); }
+  // If Apple Health has synced a caffeine total for today (e.g. from a
+  // food-logging app that writes to HealthKit), prefer that real total
+  // over the sum of manually-logged drinks — same "synced beats manual"
+  // precedent as the Nutrition tracker's calories/protein/etc.
+  let ahSyncedCaffeine = null; // { date, mg, updatedAt }
+  function todayKeyLocal() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function dailyTotal(){
+    if (ahSyncedCaffeine && ahSyncedCaffeine.date === todayKeyLocal()) return Math.round(ahSyncedCaffeine.mg);
+    return Math.round(todaysLogs().reduce((a,l)=>a+l.mg,0));
+  }
 
   function renderRing(){
     const t = scrubT!=null ? scrubT : nowHour();
@@ -616,6 +638,69 @@ body {
     window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY,CUSTOM_KEY],
       onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); custom=loadJSON(CUSTOM_KEY,[]); renderResults($('search').value); renderAll(); } });
   }
+
+  // Exposed so the separate Apple Health sync <script> below (a different
+  // closure — it can't reach ahSyncedCaffeine or renderAll directly) can
+  // push a synced total in and trigger a re-render.
+  window.__setSyncedCaffeine = function (mg, updatedAt) {
+    ahSyncedCaffeine = { date: todayKeyLocal(), mg: mg, updatedAt: updatedAt };
+    renderAll();
+  };
+})();
+</script>
+
+<!-- ============================================================
+     Pull today's caffeine straight from Apple Health (the same
+     'apple_health' row api/apple-health.js writes to), so caffeine
+     logged in a food-tracking app (MyNetDiary, MyFitnessPal, etc.)
+     that syncs to Apple Health shows up here automatically — no
+     direct integration with any of those apps exists or is needed.
+     Manual "Log a Drink" entries still work on days nothing has
+     synced yet, and the energy-curve model still runs off those
+     timestamped entries (Apple Health only gives us a daily total,
+     not per-drink timing, so it can only inform the Today total).
+     ============================================================ -->
+<script>
+(function () {
+  const AH_SUPABASE_URL = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+  const AH_SUPABASE_KEY = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function relTime(iso) {
+    if (!iso) return 'just now';
+    const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + ' min ago';
+    if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+    return Math.floor(s / 86400) + ' d ago';
+  }
+
+  async function syncFromAppleHealth() {
+    if (!window.supabase) return;
+    try {
+      const client = window.supabase.createClient(AH_SUPABASE_URL, AH_SUPABASE_KEY);
+      const { data, error } = await client.from('app_state').select('data').eq('key', 'apple_health').maybeSingle();
+      if (error || !data || !data.data || !data.data.metrics) return;
+      const metrics = data.data.metrics;
+      const updatedAt = data.data.updatedAt;
+      const today = todayKey();
+
+      const caf = metrics.caffeine;
+      if (caf && caf.date === today && window.__setSyncedCaffeine) {
+        window.__setSyncedCaffeine(caf.value || 0, updatedAt);
+        const badge = document.getElementById('cafSyncBadge');
+        const when = document.getElementById('cafSyncWhen');
+        if (when) when.textContent = relTime(updatedAt);
+        if (badge) badge.hidden = false;
+      }
+    } catch (e) { /* offline or not set up yet — manual tracking still works */ }
+  }
+
+  syncFromAppleHealth();
+  setInterval(syncFromAppleHealth, 5 * 60 * 1000);
 })();
 </script>
 </body>
