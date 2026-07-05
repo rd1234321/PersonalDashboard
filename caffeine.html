@@ -316,11 +316,12 @@ body {
   const HALF_LIFE_H = 5, PEAK_MIN = 45, FDA_MAX = 400;
 
   /* ============ Storage ============ */
-  const LOGS_KEY='caf:logs', SLEEP_KEY='caf:sleep_logs';
+  const LOGS_KEY='caf:logs', SLEEP_KEY='caf:sleep_logs', MEALS_KEY='caf:meals';
   function loadJSON(k,f){ try { return JSON.parse(localStorage.getItem(k)) || f; } catch(e){ return f; } }
   function saveJSON(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
   let logs = loadJSON(LOGS_KEY, []);
   let sleepLogs = loadJSON(SLEEP_KEY, []); // [{id, sleepTs, wakeTs}], newest first
+  let mealLogs = loadJSON(MEALS_KEY, []); // [{id, kcal, sugar, ts}] — synced from Apple Health, see below
 
   /* ============ Personal data ============ */
   let bodyKg = null;
@@ -366,12 +367,34 @@ body {
   function morningBump(t){ const d=t-wakeHour; return (d<0||d>4)?0:10*gauss(d,1.2,0.9); }
   function caffeineBoostAt(t){ const a=totalActiveAt(hToTs(t)); return 34*(1-Math.exp(-a/110)); }
   function asleepAt(t){ return (t < wakeHour) || (t >= bedHour); }
-  // energy with or without caffeine
+  // one-sided (causal) bell curve — zero before the event, so meals never
+  // affect energy before they were actually eaten
+  function afterGauss(hrsSince, mu, sd){ return hrsSince<0 ? 0 : Math.exp(-Math.pow(hrsSince-mu,2)/(2*sd*sd)); }
+  // Meals synced from Apple Health (see the sync block below) give a short
+  // blood-sugar lift ~25 min after eating, and — sized by how much sugar
+  // was in it — a dip ~80 min after that (the "food coma" / glycemic
+  // crash). Bigger, sugarier meals hit harder in both directions.
+  function mealBoostAt(t){
+    const atTs = hToTs(t);
+    let total=0;
+    for (const m of mealLogs) total += Math.min(m.kcal,700)/700 * 9 * afterGauss((atTs-m.ts)/3600000, 0.4, 0.45);
+    return total;
+  }
+  function mealDipAt(t){
+    const atTs = hToTs(t);
+    let total=0;
+    for (const m of mealLogs) total += Math.min(m.sugar||0,70) * 0.22 * afterGauss((atTs-m.ts)/3600000, 1.3, 0.65);
+    return total;
+  }
+  // energy with or without caffeine (nutrition is always factored in —
+  // there's no UI toggle for it, unlike the caffeine on/off baseline used
+  // by the STACK chart mode)
   function energyAt(t, withCaf){
     const C = circadian(t);
     if (asleepAt(t)) return clamp(C-34, 3, 20);
     let e = C - lunchDip(t) - sleepPressure(t-wakeHour) + morningBump(t);
     if (withCaf !== false) e += caffeineBoostAt(t);
+    e += mealBoostAt(t) - mealDipAt(t);
     return clamp(e, 0, 100);
   }
   function stateWord(v){ if(v>=80)return'Peak'; if(v>=62)return'High'; if(v>=44)return'Steady'; if(v>=28)return'Dip'; return'Low'; }
@@ -652,8 +675,8 @@ body {
 
   /* ============ Cloud sync ============ */
   if(window.initCloudSync){
-    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY, SLEEP_KEY],
-      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); sleepLogs=loadJSON(SLEEP_KEY,[]); applySleepToModel(); renderAll(); } });
+    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY, SLEEP_KEY, MEALS_KEY],
+      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); sleepLogs=loadJSON(SLEEP_KEY,[]); mealLogs=loadJSON(MEALS_KEY,[]); applySleepToModel(); renderAll(); } });
   }
 
   // Exposed so the separate Apple Health sync <script> below (a different
@@ -676,20 +699,33 @@ body {
     saveJSON(LOGS_KEY, logs);
     renderAll();
   };
+
+  // Same idea as caffeine doses above, but for meals: Apple Health only
+  // gives a running daily calorie/sugar total, so an increase between
+  // syncs is logged as a meal timestamped at the sync — which is what
+  // mealBoostAt/mealDipAt actually run on to shape the energy curve.
+  window.__addSyncedMealEvent = function (kcal, sugar, tsMs) {
+    if (!(kcal > 0)) return;
+    mealLogs.push({ id: 'ahm' + tsMs, kcal: Math.round(kcal), sugar: Math.round(sugar || 0), ts: tsMs });
+    mealLogs = mealLogs.slice(-60);
+    saveJSON(MEALS_KEY, mealLogs);
+    renderAll();
+  };
 })();
 </script>
 
 <!-- ============================================================
-     Pull today's caffeine straight from Apple Health (the same
-     'apple_health' row api/apple-health.js writes to) — this is now
-     the only source for the Today total, since manual drink logging
-     has been removed in favor of always syncing from the food-tracking
-     app (MyNetDiary, MyFitnessPal, etc.) that writes to Apple Health.
-     Apple Health only gives us a running daily total, not per-drink
-     timing, so whenever that total increases between polls, the
-     increase is logged as a dose timestamped at the sync itself — the
-     closest available proxy for "when it was actually drunk" — which
-     is what feeds the energy-curve/crash/cutoff model above.
+     Pull today's caffeine AND nutrition straight from Apple Health (the
+     same 'apple_health' row api/apple-health.js writes to) — this is now
+     the only source for both, since manual logging has been removed in
+     favor of always syncing from the food-tracking app (MyNetDiary,
+     MyFitnessPal, etc.) that writes to Apple Health.
+     Apple Health only gives us running daily totals, not per-item
+     timing, so whenever a total increases between polls, the increase
+     is logged as an event timestamped at the sync itself — the closest
+     available proxy for "when it actually happened" — which is what
+     feeds the energy-curve/crash/cutoff model above (caffeine doses,
+     plus meal calorie/sugar events for the post-meal boost/dip).
      ============================================================ -->
 <script>
 (function () {
@@ -710,13 +746,20 @@ body {
   }
 
   // Remembers the last daily total we saw (and for which day), so a repeat
-  // poll of the same total doesn't get logged as a second dose.
+  // poll of the same total doesn't get logged as a second dose/meal.
   const SYNC_STATE_KEY = 'caf:ah_sync_state';
   function loadSyncState() {
     try { return JSON.parse(localStorage.getItem(SYNC_STATE_KEY)); } catch (e) { return null; }
   }
   function saveSyncState(s) {
     try { localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+  const NUTRI_SYNC_STATE_KEY = 'caf:ah_nutri_sync_state';
+  function loadNutriSyncState() {
+    try { return JSON.parse(localStorage.getItem(NUTRI_SYNC_STATE_KEY)); } catch (e) { return null; }
+  }
+  function saveNutriSyncState(s) {
+    try { localStorage.setItem(NUTRI_SYNC_STATE_KEY, JSON.stringify(s)); } catch (e) {}
   }
 
   async function syncFromAppleHealth() {
@@ -747,6 +790,23 @@ body {
         const when = document.getElementById('cafSyncWhen');
         if (when) when.textContent = relTime(updatedAt);
         if (badge) badge.hidden = false;
+      }
+
+      const cal = metrics.dietary_energy;
+      const sugar = metrics.dietary_sugar;
+      if (cal && cal.date === today && window.__addSyncedMealEvent) {
+        let nst = loadNutriSyncState();
+        if (!nst || nst.date !== today) nst = { date: today, kcal: 0, sugar: 0 };
+        const sugarToday = (sugar && sugar.date === today) ? (sugar.value || 0) : nst.sugar;
+        const deltaKcal = (cal.value || 0) - nst.kcal;
+        const deltaSugar = Math.max(0, sugarToday - nst.sugar);
+        if (deltaKcal > 20) {
+          const tsMs = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+          window.__addSyncedMealEvent(deltaKcal, deltaSugar, tsMs);
+        }
+        nst.kcal = cal.value || 0;
+        nst.sugar = sugarToday;
+        saveNutriSyncState(nst);
       }
     } catch (e) { /* offline or not set up yet — manual tracking still works */ }
   }
