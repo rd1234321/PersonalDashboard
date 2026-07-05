@@ -30,7 +30,11 @@
 //     "positions": [                         (optional)
 //       { "symbol": string, "qty": number, "entry_price": number,
 //         "current_price": number, "pnl_pct": number }, ...
-//     ]
+//     ],
+//     "watchlist": [                         (optional)
+//       { "symbol": string, "current_price": number, "target_price": number | null }, ...
+//     ],
+//     "exposure": { "tech": 34, "health": 21, ... }   (optional — percentages)
 //   }
 //
 // Each position's current_price is also appended to a per-symbol
@@ -62,6 +66,28 @@ function sanitizePositions(positions) {
       pnl_pct: typeof p.pnl_pct === 'number' ? p.pnl_pct : null,
     }));
   return clean;
+}
+
+function sanitizeWatchlist(watchlist) {
+  if (!Array.isArray(watchlist)) return null;
+  return watchlist
+    .filter(w => w && typeof w === 'object' && typeof w.symbol === 'string' && w.symbol.trim())
+    .slice(0, 100)
+    .map(w => ({
+      symbol: w.symbol.trim().slice(0, 20),
+      current_price: typeof w.current_price === 'number' ? w.current_price : null,
+      target_price: typeof w.target_price === 'number' ? w.target_price : null,
+    }));
+}
+
+function sanitizeExposure(exposure) {
+  if (!exposure || typeof exposure !== 'object' || Array.isArray(exposure)) return null;
+  const clean = {};
+  for (const sector of Object.keys(exposure).slice(0, 50)) {
+    const v = exposure[sector];
+    if (typeof v === 'number' && !isNaN(v)) clean[String(sector).slice(0, 40)] = v;
+  }
+  return Object.keys(clean).length ? clean : null;
 }
 
 export default async function handler(req, res) {
@@ -108,6 +134,8 @@ export default async function handler(req, res) {
   } catch (e) { /* fall back to an empty snapshot if the read fails */ }
 
   const incomingPositions = sanitizePositions(body.positions);
+  const incomingWatchlist = sanitizeWatchlist(body.watchlist);
+  const incomingExposure = sanitizeExposure(body.exposure);
   const portfolioValue = body.portfolio_value != null ? body.portfolio_value : existing.portfolio_value;
   const cashBalance = body.cash_balance != null ? body.cash_balance : (typeof existing.cash_balance === 'number' ? existing.cash_balance : 0);
 
@@ -164,8 +192,12 @@ export default async function handler(req, res) {
     positions: incomingPositions != null ? incomingPositions : (existing.positions || undefined),
     value_history: valueHistory,
     positions_history: positionsHistory,
+    watchlist: incomingWatchlist != null ? incomingWatchlist : (existing.watchlist || undefined),
+    exposure: incomingExposure != null ? incomingExposure : (existing.exposure || undefined),
   };
   if (payload.positions === undefined) delete payload.positions;
+  if (payload.watchlist === undefined) delete payload.watchlist;
+  if (payload.exposure === undefined) delete payload.exposure;
 
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/app_state?on_conflict=key', {

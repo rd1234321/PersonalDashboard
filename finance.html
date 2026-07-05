@@ -1227,6 +1227,69 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   filter: drop-shadow(0 0 4px currentColor);
 }
 
+/* ----- 3-column Finance layout: exposure/cash/mover | portfolio | risk/watchlist/sync ----- */
+.pf-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .pf-layout { grid-template-columns: 1fr; }
+  .pf-col-left, .pf-col-right { display: flex; flex-wrap: wrap; gap: 14px; }
+  .pf-col-left .pf-tile, .pf-col-right .pf-tile { flex: 1 1 200px; }
+}
+.pf-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.pf-tile {
+  position: relative;
+  background: rgba(63,217,255,0.03);
+  padding: 14px 16px 16px;
+}
+.pf-tile[hidden] { display: none; }
+.pf-tile::before, .pf-tile::after {
+  content: ''; position: absolute; width: 12px; height: 12px; pointer-events: none;
+}
+.pf-tile::before { top: 0; left: 0; border-top: 1px solid #3fd9ff; border-left: 1px solid #3fd9ff; }
+.pf-tile::after  { bottom: 0; right: 0; border-bottom: 1px solid #3fd9ff; border-right: 1px solid #3fd9ff; }
+.pf-tile-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 10px;
+}
+.pf-tile-big {
+  font-size: 26px; font-weight: 700; color: var(--text-primary);
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.pf-tile-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; font-family: var(--font-mono); }
+.pf-tile-empty { font-size: 11px; color: var(--text-tertiary); font-style: italic; line-height: 1.5; }
+
+.pf-exposure-list { display: flex; flex-direction: column; gap: 9px; }
+.pf-exposure-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.pf-exposure-name { color: var(--text-secondary); text-transform: capitalize; }
+.pf-exposure-pct { font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+.pf-mover-symbol { display: flex; align-items: baseline; gap: 6px; }
+.pf-mover-symbol.pos { color: #4dd6a8; }
+.pf-mover-symbol.neg { color: #e0605c; }
+#topMoverPct.pos { color: #4dd6a8; }
+#topMoverPct.neg { color: #e0605c; }
+
+.pf-tile-risk { text-align: center; }
+.pf-risk-gauge { position: relative; margin: 4px auto 0; width: 120px; }
+.pf-risk-svg { width: 100%; display: block; }
+.pf-risk-label {
+  position: absolute; left: 0; right: 0; bottom: 2px; text-align: center;
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+}
+
+.pf-watchlist-list { display: flex; flex-direction: column; gap: 10px; }
+.pf-watchlist-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+.pf-watchlist-symbol { font-weight: 700; color: var(--text-primary); }
+.pf-watchlist-status { font-family: var(--font-mono); font-size: 11.5px; text-align: right; }
+.pf-watchlist-status.near { color: #f0a83c; }
+.pf-watchlist-status.away { color: var(--text-tertiary); }
+.pf-watchlist-status.price { color: var(--text-secondary); }
+
 /* ----- click-to-expand per-position chart ----- */
 .pf-pos-row { cursor: pointer; transition: background 0.15s; }
 .pf-expand-hint {
@@ -1672,29 +1735,90 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <span class="briefing-seg" id="briefingPortfolioSeg"></span>
 </div>
 
-<div class="portfolio-teaser" id="portfolioTeaser" hidden>
-  <div class="pf-scanline"></div>
-  <div class="portfolio-teaser-top">
-    <span class="portfolio-teaser-label">PORTFOLIO</span>
-    <span class="portfolio-teaser-change" id="portfolioTeaserChange"></span>
-  </div>
-  <div class="portfolio-teaser-value" id="portfolioTeaserValue">$0</div>
-  <div class="portfolio-teaser-foot">
-    <span id="portfolioTeaserPositions">0 positions</span>
-    <span id="portfolioTeaserAlerts"></span>
-  </div>
-  <div id="pfChartHolder"></div>
-</div>
+<div class="pf-layout">
 
-<div class="positions-table-wrap" id="positionsTableWrap" hidden>
-  <table class="positions-table">
-    <thead>
-      <tr>
-        <th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Value</th><th>P/L%</th><th title="Where the current price sits between what you paid and now — dim dot = entry price, bright glowing dot = current price">Range ⓘ</th>
-      </tr>
-    </thead>
-    <tbody id="positionsTableBody"></tbody>
-  </table>
+  <!-- ===== LEFT COLUMN: exposure / cash to trade / top mover ===== -->
+  <div class="pf-col pf-col-left">
+    <div class="pf-tile" id="exposureTile" hidden>
+      <div class="pf-tile-label">◆ exposure</div>
+      <div id="exposureList" class="pf-exposure-list"></div>
+    </div>
+    <div class="pf-tile" id="exposureEmptyTile">
+      <div class="pf-tile-label">◆ exposure</div>
+      <div class="pf-tile-empty">No sector breakdown synced yet</div>
+    </div>
+
+    <div class="pf-tile" id="cashTile" hidden>
+      <div class="pf-tile-label">◆ cash to trade</div>
+      <div class="pf-tile-big" id="cashTileValue">$0</div>
+      <div class="pf-tile-sub">buying power</div>
+    </div>
+
+    <div class="pf-tile" id="topMoverTile" hidden>
+      <div class="pf-tile-label">◆ top mover</div>
+      <div class="pf-tile-big pf-mover-symbol" id="topMoverSymbol">—</div>
+      <div class="pf-tile-sub" id="topMoverPct"></div>
+    </div>
+  </div>
+
+  <!-- ===== CENTER: portfolio hero + trend + positions ===== -->
+  <div class="pf-col pf-col-center">
+    <div class="portfolio-teaser" id="portfolioTeaser" hidden>
+      <div class="pf-scanline"></div>
+      <div class="portfolio-teaser-top">
+        <span class="portfolio-teaser-label">PORTFOLIO</span>
+        <span class="portfolio-teaser-change" id="portfolioTeaserChange"></span>
+      </div>
+      <div class="portfolio-teaser-value" id="portfolioTeaserValue">$0</div>
+      <div class="portfolio-teaser-foot">
+        <span id="portfolioTeaserPositions">0 positions</span>
+        <span id="portfolioTeaserAlerts"></span>
+      </div>
+      <div id="pfChartHolder"></div>
+    </div>
+
+    <div class="positions-table-wrap" id="positionsTableWrap" hidden>
+      <table class="positions-table">
+        <thead>
+          <tr>
+            <th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Value</th><th>P/L%</th><th title="Where the current price sits between what you paid and now — dim dot = entry price, bright glowing dot = current price">Range ⓘ</th>
+          </tr>
+        </thead>
+        <tbody id="positionsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== RIGHT COLUMN: risk (placeholder) / watchlist / next sync (placeholder) ===== -->
+  <div class="pf-col pf-col-right">
+    <div class="pf-tile pf-tile-risk">
+      <div class="pf-tile-label">◆ risk</div>
+      <div class="pf-risk-gauge">
+        <svg viewBox="0 0 120 68" class="pf-risk-svg">
+          <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="rgba(63,217,255,0.10)" stroke-width="10" stroke-linecap="round"/>
+          <path d="M 10 60 A 50 50 0 0 1 70 12" fill="none" stroke="#f0a83c" stroke-width="10" stroke-linecap="round"/>
+        </svg>
+        <div class="pf-risk-label">med</div>
+      </div>
+      <div class="pf-tile-sub">Not wired up yet</div>
+    </div>
+
+    <div class="pf-tile" id="watchlistTile" hidden>
+      <div class="pf-tile-label">◆ watchlist</div>
+      <div id="watchlistList" class="pf-watchlist-list"></div>
+    </div>
+    <div class="pf-tile" id="watchlistEmptyTile">
+      <div class="pf-tile-label">◆ watchlist</div>
+      <div class="pf-tile-empty">No watchlist synced yet</div>
+    </div>
+
+    <div class="pf-tile">
+      <div class="pf-tile-label">◆ next sync</div>
+      <div class="pf-tile-big" style="font-size:22px">—</div>
+      <div class="pf-tile-sub">Not wired up yet</div>
+    </div>
+  </div>
+
 </div>
 
 </div>
@@ -3290,6 +3414,86 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       renderPfChart(p.value_history, isPos ? '#4dd6a8' : '#e0605c');
       pfPositionsHistory = (p.positions_history && typeof p.positions_history === 'object') ? p.positions_history : {};
       renderPositions(p.positions);
+
+      // Cash to trade — reuses the same cash_balance already folded into
+      // the portfolio total above.
+      const cashTile = document.getElementById('cashTile');
+      if (cashTile) {
+        cashTile.hidden = !p.cash_balance && p.cash_balance !== 0;
+        const cashVal = document.getElementById('cashTileValue');
+        if (cashVal) cashVal.textContent = fmtUsd(cashBalance);
+      }
+
+      // Top mover — biggest |P/L%| among current positions, computed
+      // client-side since it's just a derived view of data we already have.
+      const topMoverTile = document.getElementById('topMoverTile');
+      if (topMoverTile) {
+        const withPnl = (p.positions || []).filter(pos => typeof pos.pnl_pct === 'number');
+        if (withPnl.length) {
+          const top = withPnl.reduce((a, b) => Math.abs(b.pnl_pct) > Math.abs(a.pnl_pct) ? b : a);
+          const topPos = top.pnl_pct >= 0;
+          const symEl = document.getElementById('topMoverSymbol');
+          const pctEl = document.getElementById('topMoverPct');
+          if (symEl) { symEl.textContent = top.symbol; symEl.classList.toggle('pos', topPos); symEl.classList.toggle('neg', !topPos); }
+          if (pctEl) {
+            pctEl.textContent = (topPos ? '▲ ' : '▼ ') + Math.abs(Math.round(top.pnl_pct * 100) / 100) + '%';
+            pctEl.classList.toggle('pos', topPos);
+            pctEl.classList.toggle('neg', !topPos);
+          }
+          topMoverTile.hidden = false;
+        } else {
+          topMoverTile.hidden = true;
+        }
+      }
+
+      // Exposure — sector: percentage rows from the synced snapshot.
+      const exposureTile = document.getElementById('exposureTile');
+      const exposureEmptyTile = document.getElementById('exposureEmptyTile');
+      if (exposureTile && exposureEmptyTile) {
+        const sectors = p.exposure && typeof p.exposure === 'object' ? Object.entries(p.exposure) : [];
+        if (sectors.length) {
+          sectors.sort((a, b) => b[1] - a[1]);
+          document.getElementById('exposureList').innerHTML = sectors.map(([name, pct]) => (
+            '<div class="pf-exposure-row"><span class="pf-exposure-name">' + escapeHtmlPf(name) + '</span>' +
+              '<span class="pf-exposure-pct">' + (Math.round(pct * 10) / 10) + '%</span></div>'
+          )).join('');
+          exposureTile.hidden = false;
+          exposureEmptyTile.hidden = true;
+        } else {
+          exposureTile.hidden = true;
+          exposureEmptyTile.hidden = false;
+        }
+      }
+
+      // Watchlist — "near target" / "X% away" when a target price was
+      // synced, otherwise just the current price.
+      const watchlistTile = document.getElementById('watchlistTile');
+      const watchlistEmptyTile = document.getElementById('watchlistEmptyTile');
+      if (watchlistTile && watchlistEmptyTile) {
+        const list = Array.isArray(p.watchlist) ? p.watchlist : [];
+        if (list.length) {
+          document.getElementById('watchlistList').innerHTML = list.map(w => {
+            let statusHtml;
+            if (typeof w.target_price === 'number' && typeof w.current_price === 'number' && w.target_price) {
+              const diffPct = ((w.current_price - w.target_price) / w.target_price) * 100;
+              const near = Math.abs(diffPct) <= 2;
+              statusHtml = near
+                ? '<span class="pf-watchlist-status near">near target</span>'
+                : '<span class="pf-watchlist-status away">' + (diffPct > 0 ? '+' : '') + Math.round(diffPct) + '% away</span>';
+            } else if (typeof w.current_price === 'number') {
+              statusHtml = '<span class="pf-watchlist-status price">' + fmtUsd(w.current_price) + '</span>';
+            } else {
+              statusHtml = '<span class="pf-watchlist-status price">—</span>';
+            }
+            return '<div class="pf-watchlist-row"><span class="pf-watchlist-symbol">' + escapeHtmlPf(w.symbol) + '</span>' + statusHtml + '</div>';
+          }).join('');
+          watchlistTile.hidden = false;
+          watchlistEmptyTile.hidden = true;
+        } else {
+          watchlistTile.hidden = true;
+          watchlistEmptyTile.hidden = false;
+        }
+      }
     } catch (e) { /* offline or not set up yet — ticker/teaser just stay hidden */ }
   }
   loadPortfolio();
