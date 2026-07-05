@@ -398,7 +398,7 @@ main {
       'distance_walking_running', 'distance_cycling', 'distance_swimming',
       'swimming_stroke_count', 'push_count', 'dietary_energy', 'water',
       'protein', 'carbohydrates', 'total_fat', 'saturated_fat',
-      'dietary_sugar', 'dietary_fiber', 'sodium', 'dietary_water',
+      'dietary_sugar', 'fiber', 'sodium', 'dietary_water',
     ]);
     // Food/nutrition metrics now live on their own Nutrition page (inside
     // the water tracker), not here — filtered out of this grid entirely
@@ -407,7 +407,7 @@ main {
     // dedicated Nutrition field.
     const AH_FOOD_METRICS = new Set([
       'dietary_energy', 'protein', 'carbohydrates', 'total_fat', 'saturated_fat',
-      'dietary_sugar', 'dietary_fiber', 'sodium', 'dietary_water', 'cholesterol',
+      'dietary_sugar', 'fiber', 'sodium', 'dietary_water', 'cholesterol',
       'calcium', 'magnesium', 'potassium', 'zinc', 'iron', 'copper', 'phosphorus',
       'selenium', 'manganese', 'chromium', 'molybdenum', 'caffeine',
       'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
@@ -556,16 +556,32 @@ main {
       return (Math.round(n * 100) / 100).toLocaleString();
     }
 
+    // Height comes from Apple Health in cm — this app defaults to US units
+    // everywhere else, so show it as ft/in here too instead of raw cm.
+    function fmtHeightFtIn(cm) {
+      const totalIn = cm / 2.54;
+      const ft = Math.floor(totalIn / 12);
+      const inch = Math.round(totalIn % 12);
+      return ft + "'" + inch + '"';
+    }
+    function displayValueUnits(name, m) {
+      if (name === 'height' && typeof m.value === 'number') {
+        return { value: fmtHeightFtIn(m.value), units: '' };
+      }
+      return { value: m.value, units: m.units || '' };
+    }
+
     function renderVitals(entries) {
       document.getElementById('ahVitals').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[i % AH_COLORS.length];
         const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
+        const dv = displayValueUnits(name, m);
         const card = (
           '<div class="ah-vital" style="--ah-c:' + color + ';animation-delay:' + (i * 0.05) + 's" data-metric="' + esc(name) + '">' +
             '<div class="ah-vital-top"><span class="ah-vital-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
             '<div class="ah-vital-ring-row">' +
               '<div class="hud-ring-wrap">' + ringSVG(points, color, 76, 6) +
-                '<div class="hud-ring-center"><span class="hud-ring-value" style="font-size:19px">' + esc(m.value) + '</span><span class="hud-ring-caption" style="font-size:8px">' + esc(m.units || '') + '</span></div>' +
+                '<div class="hud-ring-center"><span class="hud-ring-value" style="font-size:19px">' + esc(dv.value) + '</span><span class="hud-ring-caption" style="font-size:8px">' + esc(dv.units) + '</span></div>' +
               '</div>' +
               trendHTML(points, 'ah-vital-trend') +
             '</div>' +
@@ -578,10 +594,11 @@ main {
     function renderGrid(entries, colorOffset) {
       document.getElementById('ahGrid').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
+        const dv = displayValueUnits(name, m);
         const card = (
           '<div class="ah-metric" style="--ah-c:' + color + ';animation-delay:' + (i * 0.04) + 's" data-metric="' + esc(name) + '">' +
             '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
-            '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(m.value) + '</span><span class="ah-metric-units">' + esc(m.units || '') + '</span></span></div>' +
+            '<div class="ah-metric-val-row"><span><span class="ah-metric-val">' + esc(dv.value) + '</span><span class="ah-metric-units">' + esc(dv.units) + '</span></span></div>' +
           '</div>'
         );
         return card + (ahOpenDetail === name ? detailPanelHTML(name, m, color) : '');
@@ -608,12 +625,13 @@ main {
       } else {
         body = '<div class="ah-detail-empty">Not enough history yet to chart ' + esc(m.label.toLowerCase()) + ' over time — this fills in as more syncs come in from your phone.</div>';
       }
+      const dv = displayValueUnits(name, m);
       return (
         '<div class="ah-detail-row">' +
           '<div class="ah-detail" style="--ah-c:' + color + '">' +
             '<div class="ah-detail-head">' +
               '<div><div class="ah-detail-title">' + esc(m.label) + ' — ' + rangeNoun(ahRange) + '</div>' +
-              '<span class="ah-detail-val">' + esc(m.value) + '</span><span class="ah-detail-units">' + esc(m.units || '') + '</span></div>' +
+              '<span class="ah-detail-val">' + esc(dv.value) + '</span><span class="ah-detail-units">' + esc(dv.units) + '</span></div>' +
               '<button type="button" class="ah-detail-close" data-metric="' + esc(name) + '">‹ back</button>' +
             '</div>' +
             body +
