@@ -498,41 +498,6 @@ html, body {
 .nutri-macro-fill.sugar   { background: #e0605c; }
 .nutri-macro-fill.sodium  { background: #a78bfa; }
 
-.nutri-add-row {
-  display: grid; grid-template-columns: 1fr 64px 56px 56px 56px 64px 76px auto;
-  gap: 6px; align-items: center; margin-top: 4px;
-}
-.nutri-add-row[hidden] { display: none; }
-.nutri-input {
-  font-size: 13px; padding: 9px 10px; border-radius: 0;
-  border: 1px solid var(--border); background: rgba(0,0,0,0.28);
-  color: var(--text-1); font-family: inherit; min-width: 0;
-}
-.nutri-input::placeholder { color: var(--text-3); }
-.nutri-input:focus { outline: none; border-color: var(--info); }
-.nutri-add-btn {
-  padding: 9px 12px; border: 1px solid var(--info);
-  background: rgba(63,217,255,0.12); color: var(--text-1);
-  border-radius: 0; font-family: inherit; font-size: 13px; font-weight: 700;
-  cursor: pointer; transition: background 0.15s; white-space: nowrap;
-}
-.nutri-add-btn:hover { background: rgba(63,217,255,0.22); }
-
-.nutri-log-list { margin-top: 14px; }
-.nutri-log-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 0; border-top: 1px solid rgba(63,217,255,0.08);
-}
-.nutri-log-item:first-child { border-top: none; }
-.nutri-log-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; }
-.nutri-log-macros { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); white-space: nowrap; }
-.nutri-log-del {
-  background: transparent; border: none; color: var(--text-4);
-  font-size: 16px; cursor: pointer; padding: 2px 6px;
-}
-.nutri-log-del:hover { color: var(--bad); }
-.nutri-log-empty { font-size: 12px; color: var(--text-4); font-style: italic; padding: 6px 0; }
-
 .ah-sync-badge {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
@@ -548,8 +513,6 @@ html, body {
 
 @media (max-width: 560px) {
   .nutri-macros { grid-template-columns: repeat(2, 1fr); }
-  .nutri-add-row { grid-template-columns: 1fr 1fr; }
-  .nutri-add-row .nutri-add-btn { grid-column: 1 / -1; }
 }
 </style>
 </head>
@@ -606,19 +569,7 @@ html, body {
       </div>
     </div>
 
-    <div class="nutri-add-row" id="nutriAddRow">
-      <input class="nutri-input" id="nutriAddName" type="text" placeholder="Food (e.g. Chicken breast)" autocomplete="off" />
-      <input class="nutri-input" id="nutriAddCal" type="number" min="0" placeholder="kcal" />
-      <input class="nutri-input" id="nutriAddProtein" type="number" min="0" placeholder="P g" />
-      <input class="nutri-input" id="nutriAddCarbs" type="number" min="0" placeholder="C g" />
-      <input class="nutri-input" id="nutriAddFat" type="number" min="0" placeholder="F g" />
-      <input class="nutri-input" id="nutriAddSugar" type="number" min="0" placeholder="Sugar g" />
-      <input class="nutri-input" id="nutriAddSodium" type="number" min="0" placeholder="Sodium mg" />
-      <button class="nutri-add-btn" id="nutriAddBtn" type="button">+ Add</button>
-    </div>
-    <div class="nutri-synced-note" id="nutriSyncedNote" hidden>Logged via MyNetDiary → Apple Health. Manual entry is hidden while synced data exists for today.</div>
-
-    <div class="nutri-log-list" id="nutriLogList"></div>
+    <div class="nutri-synced-note" id="nutriSyncedNote" hidden>Logged via MyNetDiary → Apple Health.</div>
   </div>
 
   <div class="divider"><span>WATER</span></div>
@@ -1311,7 +1262,6 @@ html, body {
     try { s = JSON.parse(localStorage.getItem(NUTRI_KEY)); } catch (e) {}
     s = s || {};
     s.goals = Object.assign({ calories: 2000, protein: 150, carbs: 220, fat: 65, sugar: 50, sodium: 2300 }, s.goals || {});
-    s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};
     return s;
   }
   function saveNutri() {
@@ -1319,29 +1269,12 @@ html, body {
   }
   let nState = loadNutri();
 
-  function todayKey() {
-    const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-  function todayEntries() {
-    return nState.logs[todayKey()] || [];
-  }
-  function escape(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-
   function renderNutrition() {
     const synced = window.__ahSyncedNutrition; // set by the Apple Health sync block below, if today's data exists
-    const entries = todayEntries();
-    const totals = synced || entries.reduce((acc, e) => {
-      acc.cal += e.cal || 0; acc.protein += e.protein || 0; acc.carbs += e.carbs || 0; acc.fat += e.fat || 0;
-      acc.sugar += e.sugar || 0; acc.sodium += e.sodium || 0;
-      return acc;
-    }, { cal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, sodium: 0 });
+    const totals = synced || { cal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, sodium: 0 };
     const g = nState.goals;
 
     $('nutriSyncBadge').hidden = !synced;
-    $('nutriAddRow').hidden = !!synced;
     $('nutriSyncedNote').hidden = !synced;
 
     $('nutriCalNum').textContent = Math.round(totals.cal).toLocaleString();
@@ -1360,52 +1293,7 @@ html, body {
     macro('fat', 'Fat');
     macro('sugar', 'Sugar');
     macro('sodium', 'Sodium', 'mg');
-
-    const listEl = $('nutriLogList');
-    if (synced) {
-      listEl.innerHTML = '';
-    } else if (!entries.length) {
-      listEl.innerHTML = '<div class="nutri-log-empty">No food logged yet today.</div>';
-    } else {
-      listEl.innerHTML = entries.map(e => (
-        '<div class="nutri-log-item">' +
-          '<span class="nutri-log-name">' + escape(e.name) + '</span>' +
-          '<span class="nutri-log-macros">' + Math.round(e.cal || 0) + ' kcal · P' + Math.round(e.protein || 0) + ' C' + Math.round(e.carbs || 0) + ' F' + Math.round(e.fat || 0) + ' · Sugar' + Math.round(e.sugar || 0) + ' Na' + Math.round(e.sodium || 0) + '</span>' +
-          '<button class="nutri-log-del" data-id="' + e.id + '" aria-label="Delete">×</button>' +
-        '</div>'
-      )).join('');
-    }
   }
-
-  $('nutriAddBtn').addEventListener('click', () => {
-    const name = $('nutriAddName').value.trim();
-    if (!name) { $('nutriAddName').focus(); return; }
-    const entry = {
-      id: 'n' + Date.now() + Math.random().toString(36).slice(2, 6),
-      name: name,
-      cal: parseFloat($('nutriAddCal').value) || 0,
-      protein: parseFloat($('nutriAddProtein').value) || 0,
-      carbs: parseFloat($('nutriAddCarbs').value) || 0,
-      fat: parseFloat($('nutriAddFat').value) || 0,
-      sugar: parseFloat($('nutriAddSugar').value) || 0,
-      sodium: parseFloat($('nutriAddSodium').value) || 0,
-    };
-    const key = todayKey();
-    nState.logs[key] = nState.logs[key] || [];
-    nState.logs[key].push(entry);
-    saveNutri();
-    ['nutriAddName', 'nutriAddCal', 'nutriAddProtein', 'nutriAddCarbs', 'nutriAddFat', 'nutriAddSugar', 'nutriAddSodium'].forEach(id => { $(id).value = ''; });
-    renderNutrition();
-  });
-
-  $('nutriLogList').addEventListener('click', (e) => {
-    const btn = e.target.closest('.nutri-log-del');
-    if (!btn) return;
-    const key = todayKey();
-    nState.logs[key] = (nState.logs[key] || []).filter(x => x.id !== btn.dataset.id);
-    saveNutri();
-    renderNutrition();
-  });
 
   function renderNutriSettings() {
     $('setNutriCal').value = nState.goals.calories;

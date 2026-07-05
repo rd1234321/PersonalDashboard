@@ -137,33 +137,6 @@ body {
 .daily-msg.good { color: var(--success); } .daily-msg.warn { color: var(--warning); } .daily-msg.bad { color: var(--danger); }
 .daily-note { font-size: 12px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.5; }
 
-/* ===== Search + log ===== */
-.gm-input {
-  width: 100%; padding: 12px 14px; border: 1px solid rgba(74,107,120,0.3); border-radius: 0;
-  background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none;
-  transition: border-color 0.2s, background 0.2s;
-}
-.gm-input::placeholder { color: var(--text-tertiary); }
-.gm-input:focus { border-color: rgba(240,168,60,0.5); background: rgba(0,0,0,0.36); }
-.results { list-style: none; margin: 12px 0 0; padding: 0; max-height: 320px; overflow-y: auto; }
-.result { display: flex; align-items: center; gap: 12px; padding: 11px 12px; margin-bottom: 6px;
-  background: rgba(63,217,255,0.03); border: 1px solid rgba(74,107,120,0.25); border-radius: 0; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
-.result:hover { background: rgba(240,168,60,0.08); border-color: rgba(240,168,60,0.35); }
-.result-emoji { font-size: 20px; flex-shrink: 0; width: 24px; text-align: center; }
-.result-name { flex: 1; font-size: 14px; color: var(--text-primary); }
-.result-cat { font-size: 11px; color: var(--text-tertiary); }
-.result-mg { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--hud-amber); font-variant-numeric: tabular-nums; }
-.result-mg small { color: var(--text-tertiary); font-weight: 600; }
-.results-empty { font-size: 12px; font-style: italic; color: var(--text-tertiary); padding: 10px 2px; }
-.custom-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(74,107,120,0.25); }
-.custom-row .gm-input { flex: 1; min-width: 0; }
-.custom-row .mg-input { width: 92px; flex: none; }
-.gm-add { position: relative; padding: 12px 18px; border: 1px solid var(--hud-amber); border-radius: 0; background: var(--hud-amber); color: var(--hud-bg);
-  font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; cursor: pointer;
-  transition: transform 0.1s, filter 0.15s; white-space: nowrap; }
-.gm-add:hover { filter: brightness(1.08); transform: translateY(-1px); }
-.gm-add:active { transform: translateY(0); }
-
 /* ===== Log list ===== */
 .log-list { list-style: none; margin: 0; padding: 0; }
 .empty-state { text-align: center; font-size: 12px; font-style: italic; color: var(--text-tertiary); padding: 16px 0; }
@@ -276,20 +249,6 @@ body {
     </div>
   </div>
 
-  <!-- LOG A DRINK -->
-  <div class="section">
-    <div class="section-title">Log a Drink</div>
-    <div class="gm-card">
-      <input class="gm-input" id="search" type="text" placeholder="Search a drink… (coffee, monster, matcha…)" autocomplete="off">
-      <ul class="results" id="results"></ul>
-      <div class="custom-row">
-        <input class="gm-input" id="customName" type="text" placeholder="Custom drink name" autocomplete="off">
-        <input class="gm-input mg-input" id="customMg" type="number" min="0" placeholder="mg" autocomplete="off">
-        <button class="gm-add" id="customAdd" type="button">Add</button>
-      </div>
-    </div>
-  </div>
-
   <!-- TODAY'S LOG -->
   <div class="section">
     <div class="section-title">Logged Today</div>
@@ -310,47 +269,11 @@ body {
   /* ============ Pharmacokinetics ============ */
   const HALF_LIFE_H = 5, PEAK_MIN = 45, FDA_MAX = 400;
 
-  /* ============ Beverage database ============ */
-  const DB = [
-    {n:'Brewed coffee (8 oz)',mg:95,c:'Coffee',e:'☕'},{n:'Brewed coffee (12 oz)',mg:140,c:'Coffee',e:'☕'},
-    {n:'Brewed coffee (16 oz)',mg:190,c:'Coffee',e:'☕'},{n:'Large drip coffee (20 oz)',mg:240,c:'Coffee',e:'☕'},
-    {n:'Cold brew (16 oz)',mg:205,c:'Coffee',e:'🧊'},{n:'Nitro cold brew (16 oz)',mg:280,c:'Coffee',e:'🧊'},
-    {n:'Instant coffee (8 oz)',mg:62,c:'Coffee',e:'☕'},{n:'Decaf coffee (8 oz)',mg:3,c:'Coffee',e:'☕'},
-    {n:'Espresso (1 shot)',mg:64,c:'Espresso',e:'☕'},{n:'Double espresso (2 shots)',mg:128,c:'Espresso',e:'☕'},
-    {n:'Latte (1 shot)',mg:64,c:'Espresso',e:'☕'},{n:'Latte, large (2 shots)',mg:128,c:'Espresso',e:'☕'},
-    {n:'Cappuccino (1 shot)',mg:64,c:'Espresso',e:'☕'},{n:'Americano (2 shots)',mg:128,c:'Espresso',e:'☕'},
-    {n:'Flat white (2 shots)',mg:130,c:'Espresso',e:'☕'},{n:'Mocha (2 shots)',mg:128,c:'Espresso',e:'☕'},
-    {n:'Macchiato (1 shot)',mg:64,c:'Espresso',e:'☕'},{n:'Starbucks grande Pike',mg:310,c:'Coffee',e:'☕'},
-    {n:'Starbucks grande Blonde',mg:360,c:'Coffee',e:'☕'},{n:'Dunkin medium coffee',mg:210,c:'Coffee',e:'☕'},
-    {n:'Black tea (8 oz)',mg:47,c:'Tea',e:'🍵'},{n:'Green tea (8 oz)',mg:28,c:'Tea',e:'🍵'},
-    {n:'Matcha (1 tsp)',mg:70,c:'Tea',e:'🍵'},{n:'Oolong tea (8 oz)',mg:38,c:'Tea',e:'🍵'},
-    {n:'White tea (8 oz)',mg:30,c:'Tea',e:'🍵'},{n:'Chai latte (8 oz)',mg:50,c:'Tea',e:'🍵'},
-    {n:'Yerba mate (8 oz)',mg:85,c:'Tea',e:'🍵'},{n:'Iced tea (16 oz)',mg:47,c:'Tea',e:'🧊'},
-    {n:'Herbal / rooibos tea',mg:0,c:'Tea',e:'🍵'},
-    {n:'Red Bull (8.4 oz)',mg:80,c:'Energy',e:'⚡'},{n:'Red Bull (12 oz)',mg:114,c:'Energy',e:'⚡'},
-    {n:'Monster (16 oz)',mg:160,c:'Energy',e:'⚡'},{n:'Monster Ultra (16 oz)',mg:150,c:'Energy',e:'⚡'},
-    {n:'Rockstar (16 oz)',mg:160,c:'Energy',e:'⚡'},{n:'Bang (16 oz)',mg:300,c:'Energy',e:'⚡'},
-    {n:'Reign (16 oz)',mg:300,c:'Energy',e:'⚡'},{n:'Celsius (12 oz)',mg:200,c:'Energy',e:'⚡'},
-    {n:'Celsius Essentials (16 oz)',mg:270,c:'Energy',e:'⚡'},{n:'Alani Nu (12 oz)',mg:200,c:'Energy',e:'⚡'},
-    {n:'Prime Energy (12 oz)',mg:200,c:'Energy',e:'⚡'},{n:'C4 Energy (16 oz)',mg:200,c:'Energy',e:'⚡'},
-    {n:'Ghost Energy (16 oz)',mg:200,c:'Energy',e:'⚡'},{n:'NOS (16 oz)',mg:160,c:'Energy',e:'⚡'},
-    {n:'5-Hour Energy',mg:200,c:'Energy',e:'⚡'},{n:'5-Hour Energy Extra',mg:230,c:'Energy',e:'⚡'},
-    {n:'Coca-Cola (12 oz)',mg:34,c:'Soda',e:'🥤'},{n:'Diet Coke (12 oz)',mg:46,c:'Soda',e:'🥤'},
-    {n:'Coke Zero (12 oz)',mg:34,c:'Soda',e:'🥤'},{n:'Pepsi (12 oz)',mg:38,c:'Soda',e:'🥤'},
-    {n:'Pepsi Zero (12 oz)',mg:69,c:'Soda',e:'🥤'},{n:'Mountain Dew (12 oz)',mg:54,c:'Soda',e:'🥤'},
-    {n:'Mtn Dew Kickstart',mg:90,c:'Soda',e:'🥤'},{n:'Dr Pepper (12 oz)',mg:41,c:'Soda',e:'🥤'},
-    {n:'Barq\'s Root Beer (12 oz)',mg:22,c:'Soda',e:'🥤'},
-    {n:'Pre-workout (1 scoop)',mg:200,c:'Supplement',e:'💊'},{n:'Caffeine pill (200 mg)',mg:200,c:'Supplement',e:'💊'},
-    {n:'Caffeine pill (100 mg)',mg:100,c:'Supplement',e:'💊'},
-    {n:'Dark chocolate (1 oz)',mg:24,c:'Other',e:'🍫'},{n:'Milk chocolate (1 oz)',mg:6,c:'Other',e:'🍫'},{n:'Hot chocolate (8 oz)',mg:5,c:'Other',e:'🍫'},
-  ];
-
   /* ============ Storage ============ */
-  const LOGS_KEY='caf:logs', CUSTOM_KEY='caf:custom';
+  const LOGS_KEY='caf:logs';
   function loadJSON(k,f){ try { return JSON.parse(localStorage.getItem(k)) || f; } catch(e){ return f; } }
   function saveJSON(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
   let logs = loadJSON(LOGS_KEY, []);
-  let custom = loadJSON(CUSTOM_KEY, []);
 
   /* ============ Personal data ============ */
   let bodyKg = null;
@@ -575,7 +498,7 @@ body {
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function renderLog(){
     const list=$('logList'); const tl=todaysLogs().slice().sort((a,b)=>b.ts-a.ts); list.innerHTML='';
-    if(tl.length===0){ const li=document.createElement('li'); li.className='empty-state'; li.textContent='No drinks logged today — search one above to start tracking.'; list.appendChild(li); return; }
+    if(tl.length===0){ const li=document.createElement('li'); li.className='empty-state'; li.textContent='Nothing synced from Apple Health yet today.'; list.appendChild(li); return; }
     tl.forEach(l=>{
       const m=milestones(l); const li=document.createElement('li'); li.className='log-row';
       li.innerHTML='<span class="log-emoji">'+(l.e||'☕')+'</span><div class="log-main"><div class="log-name">'+escapeHtml(l.n)+'<b>'+l.mg+' mg</b></div>'
@@ -587,24 +510,6 @@ body {
   }
 
   function renderAll(){ renderRing(); renderChart(); renderPlan(); renderDaily(); renderLog(); }
-
-  /* ============ Logging / search / custom ============ */
-  function logDrink(item){ logs.push({id:'c'+Date.now()+Math.floor(Math.random()*1000), n:item.n, mg:Math.round(item.mg), e:item.e||'☕', ts:Date.now()}); saveJSON(LOGS_KEY,logs); renderAll(); }
-  function allDrinks(){ return DB.concat(custom.map(c=>({n:c.n,mg:c.mg,c:'Custom',e:'➕'}))); }
-  function renderResults(q){
-    const el=$('results'); const query=(q||'').trim().toLowerCase(); let items=allDrinks();
-    if(query) items=items.filter(d=>d.n.toLowerCase().includes(query)||d.c.toLowerCase().includes(query));
-    items=items.slice(0, query?40:12); el.innerHTML='';
-    if(items.length===0){ const li=document.createElement('li'); li.className='results-empty'; li.textContent='No match — add it as a custom drink below.'; el.appendChild(li); return; }
-    items.forEach(d=>{ const li=document.createElement('li'); li.className='result';
-      li.innerHTML='<span class="result-emoji">'+(d.e||'☕')+'</span><span class="result-name">'+escapeHtml(d.n)+' <span class="result-cat">· '+d.c+'</span></span><span class="result-mg">'+d.mg+'<small> mg</small></span>';
-      li.addEventListener('click',()=>{ logDrink(d); $('search').value=''; renderResults(''); }); el.appendChild(li); });
-  }
-  function addCustom(){
-    const name=$('customName').value.trim(); const mg=parseInt($('customMg').value,10);
-    if(!name||!(mg>=0)) return; custom.push({n:name,mg:mg,e:'➕',c:'Custom'}); saveJSON(CUSTOM_KEY,custom);
-    logDrink({n:name,mg:mg,e:'➕'}); $('customName').value=''; $('customMg').value=''; renderResults($('search').value);
-  }
 
   /* ============ Scrub interaction ============ */
   function scrubFromEvent(e){
@@ -624,19 +529,14 @@ body {
   $('modeToggle').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
     chartMode=b.dataset.m; $('modeToggle').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderChart();
   }));
-  $('search').addEventListener('input',(e)=>renderResults(e.target.value));
-  $('customAdd').addEventListener('click',addCustom);
-  $('customMg').addEventListener('keydown',(e)=>{ if(e.key==='Enter') addCustom(); });
-
   readProfile();
-  renderResults('');
   renderAll();
   setInterval(()=>{ if(scrubT==null) renderAll(); }, 60000);
 
   /* ============ Cloud sync ============ */
   if(window.initCloudSync){
-    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY,CUSTOM_KEY],
-      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); custom=loadJSON(CUSTOM_KEY,[]); renderResults($('search').value); renderAll(); } });
+    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY],
+      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); renderAll(); } });
   }
 
   // Exposed so the separate Apple Health sync <script> below (a different
@@ -651,14 +551,14 @@ body {
 
 <!-- ============================================================
      Pull today's caffeine straight from Apple Health (the same
-     'apple_health' row api/apple-health.js writes to), so caffeine
-     logged in a food-tracking app (MyNetDiary, MyFitnessPal, etc.)
-     that syncs to Apple Health shows up here automatically — no
-     direct integration with any of those apps exists or is needed.
-     Manual "Log a Drink" entries still work on days nothing has
-     synced yet, and the energy-curve model still runs off those
-     timestamped entries (Apple Health only gives us a daily total,
-     not per-drink timing, so it can only inform the Today total).
+     'apple_health' row api/apple-health.js writes to) — this is now
+     the only source for the Today total, since manual drink logging
+     has been removed in favor of always syncing from the food-tracking
+     app (MyNetDiary, MyFitnessPal, etc.) that writes to Apple Health.
+     Apple Health only gives us a daily total, not per-drink timing, so
+     the energy-curve/smart-timing model above (which needs per-dose
+     timestamps) won't reflect today's intake until a richer data
+     source exists — only the Today ring is wired to the synced total.
      ============================================================ -->
 <script>
 (function () {
