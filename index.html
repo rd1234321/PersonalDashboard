@@ -846,6 +846,7 @@ body {
   // Read-only mirrors of topbar.js's progress helpers, so the desktop
   // dial rings show the same numbers as the shared topbar's water pill.
   function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
+  function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function activeDateKey() {
     const now = new Date();
     const dt = new Date(now);
@@ -886,16 +887,41 @@ body {
   }
   const g = getGoalsProgress();
   paintRing(document.getElementById('dialMainFill'), document.getElementById('dialMainSub'), g.done, g.total, 'goals', 'goals');
-  const w = getNutritionProgress();
-  paintRing(document.getElementById('dialWaterFill'), document.getElementById('dialWaterSub'), w.done, w.total, 'nutrition', 'kcal');
+
+  // Nutrition dial: paint instantly from whatever's in local storage, then
+  // refresh from Supabase — index.html has no other way to pick up a
+  // sync that happened on another device/tab (unlike po-water.html,
+  // which pulls the Apple Health row itself). Without this, the dial
+  // only ever reflected local storage at the moment this page loaded.
+  function renderNutritionDial() {
+    const w = getNutritionProgress();
+    paintRing(document.getElementById('dialWaterFill'), document.getElementById('dialWaterSub'), w.done, w.total, 'nutrition', 'kcal');
+    const waterReadout = document.getElementById('hudWaterReadout');
+    if (waterReadout) waterReadout.textContent = 'calories ' + (w.total ? w.done + '/' + w.total : '-/-');
+  }
+  renderNutritionDial();
+  window.addEventListener('storage', renderNutritionDial);
+
+  async function refreshNutritionFromCloud() {
+    try {
+      if (!window.supabase) return;
+      const url = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+      const key = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+      const client = window.supabase.createClient(url, key);
+      const { data, error } = await client.from('app_state').select('data').eq('key', 'nutrition_v1').maybeSingle();
+      if (error || !data || !data.data) return;
+      saveJSON('nutrition_v1', data.data);
+      renderNutritionDial();
+    } catch (e) { /* offline or not set up yet — local value stands */ }
+  }
+  refreshNutritionFromCloud();
+  setInterval(refreshNutritionFromCloud, 5 * 60 * 1000);
 
   // ---- corner telemetry readouts (all values already computed above) ----
   const buildEl = document.getElementById('hudBuild');
   if (buildEl) buildEl.textContent = calendarDateKey();
   const goalsReadout = document.getElementById('hudGoalsReadout');
   if (goalsReadout) goalsReadout.textContent = 'goals ' + (g.total ? g.done + '/' + g.total : '-/-');
-  const waterReadout = document.getElementById('hudWaterReadout');
-  if (waterReadout) waterReadout.textContent = 'calories ' + (w.total ? w.done + '/' + w.total : '-/-');
   const clockReadout = document.getElementById('hudClockReadout');
   function tickCornerClock() {
     if (!clockReadout) return;
