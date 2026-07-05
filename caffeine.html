@@ -546,6 +546,19 @@ body {
     ahSyncedCaffeine = { date: todayKeyLocal(), mg: mg, updatedAt: updatedAt };
     renderAll();
   };
+
+  // Apple Health only gives us a running daily total, never per-drink
+  // timing — so when that total goes up between syncs, the best guess for
+  // when the increase was actually drunk is "around when the sync arrived."
+  // The sync block below computes the delta and calls this to log it as a
+  // real timestamped dose, which is what the energy-curve/crash/cutoff
+  // model (built on time-since-dose decay) actually runs on.
+  window.__addSyncedCaffeineDose = function (mg, tsMs) {
+    if (!(mg > 0)) return;
+    logs.push({ id: 'ah' + tsMs, n: 'Apple Health sync', mg: Math.round(mg), e: '🍎', ts: tsMs });
+    saveJSON(LOGS_KEY, logs);
+    renderAll();
+  };
 })();
 </script>
 
@@ -555,10 +568,11 @@ body {
      the only source for the Today total, since manual drink logging
      has been removed in favor of always syncing from the food-tracking
      app (MyNetDiary, MyFitnessPal, etc.) that writes to Apple Health.
-     Apple Health only gives us a daily total, not per-drink timing, so
-     the energy-curve/smart-timing model above (which needs per-dose
-     timestamps) won't reflect today's intake until a richer data
-     source exists — only the Today ring is wired to the synced total.
+     Apple Health only gives us a running daily total, not per-drink
+     timing, so whenever that total increases between polls, the
+     increase is logged as a dose timestamped at the sync itself — the
+     closest available proxy for "when it was actually drunk" — which
+     is what feeds the energy-curve/crash/cutoff model above.
      ============================================================ -->
 <script>
 (function () {
@@ -578,6 +592,16 @@ body {
     return Math.floor(s / 86400) + ' d ago';
   }
 
+  // Remembers the last daily total we saw (and for which day), so a repeat
+  // poll of the same total doesn't get logged as a second dose.
+  const SYNC_STATE_KEY = 'caf:ah_sync_state';
+  function loadSyncState() {
+    try { return JSON.parse(localStorage.getItem(SYNC_STATE_KEY)); } catch (e) { return null; }
+  }
+  function saveSyncState(s) {
+    try { localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+
   async function syncFromAppleHealth() {
     if (!window.supabase) return;
     try {
@@ -591,6 +615,17 @@ body {
       const caf = metrics.caffeine;
       if (caf && caf.date === today && window.__setSyncedCaffeine) {
         window.__setSyncedCaffeine(caf.value || 0, updatedAt);
+
+        let st = loadSyncState();
+        if (!st || st.date !== today) st = { date: today, mg: 0 };
+        const delta = (caf.value || 0) - st.mg;
+        if (delta > 0.5 && window.__addSyncedCaffeineDose) {
+          const tsMs = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+          window.__addSyncedCaffeineDose(delta, tsMs);
+        }
+        st.mg = caf.value || 0;
+        saveSyncState(st);
+
         const badge = document.getElementById('cafSyncBadge');
         const when = document.getElementById('cafSyncWhen');
         if (when) when.textContent = relTime(updatedAt);
