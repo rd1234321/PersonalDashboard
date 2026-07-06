@@ -602,7 +602,7 @@ body {
     if($('sleepStart')) $('sleepStart').value = toLocalInputValue(bed);
     if($('sleepEnd')) $('sleepEnd').value = toLocalInputValue(wake);
   }
-  function addSleepLog(){
+  async function addSleepLog(){
     const sv=$('sleepStart').value, wv=$('sleepEnd').value;
     if(!sv || !wv) return;
     const sleepTs=new Date(sv).getTime(), wakeTs=new Date(wv).getTime();
@@ -613,6 +613,7 @@ body {
     saveJSON(SLEEP_KEY, sleepLogs);
     applySleepToModel();
     renderAll();
+    syncSleepLogs(); // pulls the other device's entries too, merges, pushes back
   }
   function renderSleep(){
     const numEl=$('sleepHoursNum'), msgEl=$('sleepMsg'), listEl=$('sleepLogList');
@@ -644,6 +645,7 @@ body {
     saveJSON(SLEEP_KEY, sleepLogs);
     applySleepToModel();
     renderAll();
+    pushRemoteSleepLogs(sleepLogs); // explicit overwrite so the deletion sticks (not merged back in)
   });
   $('sleepAdd').addEventListener('click', addSleepLog);
 
@@ -674,10 +676,60 @@ body {
   setInterval(()=>{ if(scrubT==null) renderAll(); }, 60000);
 
   /* ============ Cloud sync ============ */
+  // Sleep logs get their own merge-based sync (see below) instead of going
+  // through the generic blob sync — that one does a wholesale overwrite
+  // per device, so two devices each adding an entry before the other's
+  // push arrives would silently erase one of the entries. Sleep logs are
+  // appended from multiple devices often enough (log on phone before bed,
+  // check on laptop next day) that this actually happened.
   if(window.initCloudSync){
-    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY, SLEEP_KEY, MEALS_KEY],
-      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); sleepLogs=loadJSON(SLEEP_KEY,[]); mealLogs=loadJSON(MEALS_KEY,[]); applySleepToModel(); renderAll(); } });
+    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY, MEALS_KEY],
+      onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); mealLogs=loadJSON(MEALS_KEY,[]); renderAll(); } });
   }
+
+  /* ============ Sleep log sync (merge by id, its own app_state row) ============ */
+  const CAF_SUPABASE_URL = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+  const CAF_SUPABASE_KEY = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  const SLEEP_REMOTE_KEY = 'caf_sleep_logs';
+  let cafClient = null;
+  function getCafClient() {
+    if (cafClient) return cafClient;
+    if (!window.supabase) return null;
+    cafClient = window.supabase.createClient(CAF_SUPABASE_URL, CAF_SUPABASE_KEY);
+    return cafClient;
+  }
+  async function pullRemoteSleepLogs() {
+    const c = getCafClient();
+    if (!c) return [];
+    try {
+      const { data } = await c.from('app_state').select('data').eq('key', SLEEP_REMOTE_KEY).maybeSingle();
+      return (data && data.data && Array.isArray(data.data.logs)) ? data.data.logs : [];
+    } catch (e) { return []; }
+  }
+  async function pushRemoteSleepLogs(logsToPush) {
+    const c = getCafClient();
+    if (!c) return;
+    try { await c.from('app_state').upsert({ key: SLEEP_REMOTE_KEY, data: { logs: logsToPush } }); } catch (e) {}
+  }
+  function mergeSleepArrays(a, b) {
+    const byId = new Map();
+    a.concat(b).forEach(l => { if (l && l.id) byId.set(l.id, l); });
+    return Array.from(byId.values()).sort((x, y) => y.wakeTs - x.wakeTs).slice(0, 30);
+  }
+  // Pulls whatever the other device(s) have logged, unions it with what's
+  // logged here (by id, so nothing gets dropped either direction), then
+  // writes the merged list back both locally and remotely.
+  async function syncSleepLogs() {
+    const remote = await pullRemoteSleepLogs();
+    const merged = mergeSleepArrays(sleepLogs, remote);
+    const changed = JSON.stringify(merged) !== JSON.stringify(sleepLogs);
+    sleepLogs = merged;
+    saveJSON(SLEEP_KEY, sleepLogs);
+    await pushRemoteSleepLogs(sleepLogs);
+    if (changed) { applySleepToModel(); renderAll(); }
+  }
+  syncSleepLogs();
+  setInterval(syncSleepLogs, 60 * 1000);
 
   // Exposed so the separate Apple Health sync <script> below (a different
   // closure — it can't reach ahSyncedCaffeine or renderAll directly) can
