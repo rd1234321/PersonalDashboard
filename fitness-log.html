@@ -112,6 +112,33 @@ body { min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 20px 60px
 .fl-ex-name { font-size: 17px; color: var(--fl-text); }
 .fl-ex-last { font-size: 14px; color: var(--fl-muted); text-align: right; white-space: nowrap; }
 
+.fl-add-ex-btn {
+  width: 100%; text-align: left; margin-top: 12px; padding: 13px 12px;
+  background: none; border: 1px dashed rgba(74,107,120,0.4); border-radius: 8px;
+  color: var(--fl-muted); font-family: var(--font); font-size: 14px; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.fl-add-ex-btn:hover { border-color: var(--fl-cyan); color: var(--fl-cyan); }
+.fl-add-ex-btn[hidden] { display: none; }
+.fl-add-ex-form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.fl-add-ex-form[hidden] { display: none; }
+.fl-add-ex-input, .fl-add-ex-select {
+  padding: 11px 12px; border: 1px solid rgba(74,107,120,0.35); border-radius: 8px;
+  background: rgba(255,255,255,0.03); color: var(--fl-text); font-family: var(--font);
+  font-size: 14px; outline: none; transition: border-color 0.15s;
+}
+.fl-add-ex-input { flex: 2; min-width: 140px; }
+.fl-add-ex-select { flex: 1; min-width: 110px; }
+.fl-add-ex-input:focus, .fl-add-ex-select:focus { border-color: var(--fl-cyan); }
+.fl-add-ex-submit, .fl-add-ex-cancel {
+  padding: 11px 16px; border-radius: 8px; font-family: var(--font); font-size: 13px;
+  font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.fl-add-ex-submit { border: 1px solid var(--fl-teal); background: transparent; color: var(--fl-teal); }
+.fl-add-ex-submit:hover { background: rgba(77,214,168,0.1); }
+.fl-add-ex-cancel { border: 1px solid var(--fl-border-2); background: transparent; color: var(--fl-muted); }
+.fl-add-ex-cancel:hover { color: var(--fl-text); border-color: rgba(74,107,120,0.5); }
+
 /* ----- log panel ----- */
 .fl-log-fields { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 18px; }
 .fl-field { flex: 1; min-width: 100px; }
@@ -210,6 +237,20 @@ body { min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 20px 60px
         <span class="fl-card-title"><span class="diamond">◆</span><span id="flListTitle">chest exercises</span></span>
       </div>
       <ul class="fl-ex-list" id="flExList"></ul>
+      <button class="fl-add-ex-btn" id="flAddExBtn" type="button">+ add custom exercise</button>
+      <div class="fl-add-ex-form" id="flAddExForm" hidden>
+        <input type="text" id="flNewExName" class="fl-add-ex-input" placeholder="Exercise name" autocomplete="off">
+        <select id="flNewExGroup" class="fl-add-ex-select">
+          <option value="chest">chest</option>
+          <option value="back">back</option>
+          <option value="legs">legs</option>
+          <option value="shoulders">shoulders</option>
+          <option value="arms">arms</option>
+          <option value="core">core</option>
+        </select>
+        <button class="fl-add-ex-submit" id="flNewExSubmit" type="button">add</button>
+        <button class="fl-add-ex-cancel" id="flNewExCancel" type="button">cancel</button>
+      </div>
     </div>
 
     <div class="fl-card">
@@ -423,6 +464,42 @@ body { min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 20px 60px
     activeUnit = lastUnitFor(activeExerciseId);
     renderAll();
   });
+
+  /* ============ Add custom exercise ============ */
+  function uniqueExerciseId(base) {
+    const safeBase = base || 'exercise-' + Date.now();
+    let id = safeBase, n = 2;
+    while (exerciseLibrary.some(e => e.id === id)) { id = safeBase + '-' + n; n++; }
+    return id;
+  }
+  function openAddExForm() {
+    $('flNewExGroup').value = activeGroup;
+    $('flAddExForm').hidden = false;
+    $('flAddExBtn').hidden = true;
+    $('flNewExName').focus();
+  }
+  function closeAddExForm() {
+    $('flAddExForm').hidden = true;
+    $('flAddExBtn').hidden = false;
+    $('flNewExName').value = '';
+  }
+  async function addCustomExercise() {
+    const name = $('flNewExName').value.trim();
+    const group = $('flNewExGroup').value;
+    if (!name) { $('flNewExName').focus(); return; }
+    const entry = { id: uniqueExerciseId(slugify(name)), name: name, muscle_group: group, equipment: null };
+    exerciseLibrary.push(entry);
+    await saveLibrary(); // same 'exercise_library' row as the presets — no special-casing
+    closeAddExForm();
+    activeGroup = group;
+    activeExerciseId = entry.id;
+    activeUnit = 'lb';
+    renderAll();
+  }
+  $('flAddExBtn').addEventListener('click', openAddExForm);
+  $('flNewExCancel').addEventListener('click', closeAddExForm);
+  $('flNewExSubmit').addEventListener('click', addCustomExercise);
+  $('flNewExName').addEventListener('keydown', (e) => { if (e.key === 'Enter') addCustomExercise(); });
 
   /* ============ Log panel ============ */
   function renderLogPanel() {
