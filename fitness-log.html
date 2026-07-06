@@ -269,17 +269,6 @@ button, input, select { font-family: var(--font); }
 .fl-routine-card::after  { bottom: -1px; right: -1px; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
 .fl-routine-name { font-size: 19px; font-weight: 700; color: var(--fl-text); margin-bottom: 8px; }
 .fl-routine-meta { font-size: 13.5px; color: var(--fl-muted); }
-
-/* ----- home: recent workouts ----- */
-.fl-recent-list { list-style: none; margin: 0; padding: 0; }
-.fl-recent-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 2px; cursor: pointer; border-bottom: 1px solid var(--fl-border); transition: background 0.15s;
-}
-.fl-recent-row:last-child { border-bottom: 0; }
-.fl-recent-row:hover { background: rgba(63,217,255,0.04); }
-.fl-recent-name { font-size: 16px; color: var(--fl-text); }
-.fl-recent-meta { font-size: 13.5px; color: var(--fl-muted); white-space: nowrap; }
 </style>
 </head>
 <body class="hud-grid">
@@ -306,11 +295,6 @@ button, input, select { font-family: var(--font); }
 
   <div class="fl-section-title"><span class="diamond">◆</span>routines</div>
   <div class="fl-routines-grid" id="routinesGrid"></div>
-
-  <div class="fl-section-title"><span class="diamond">◆</span>recent workouts</div>
-  <div class="fl-card">
-    <ul class="fl-recent-list" id="recentList"></ul>
-  </div>
 </div>
 
 <!-- ============================================================
@@ -394,16 +378,6 @@ button, input, select { font-family: var(--font); }
       <button class="fl-modal-close" id="historyModalClose" type="button">&times;</button>
     </div>
     <div id="historyBody"></div>
-  </div>
-</div>
-
-<div class="fl-modal-bg" id="dayDetailModal">
-  <div class="fl-modal">
-    <div class="fl-modal-head">
-      <h3 id="dayDetailTitle">Workout</h3>
-      <button class="fl-modal-close" id="dayDetailClose" type="button">&times;</button>
-    </div>
-    <div id="dayDetailBody"></div>
   </div>
 </div>
 
@@ -626,17 +600,6 @@ button, input, select { font-family: var(--font); }
     fitnessSets.forEach(s => { if (ids.has(s.exercise_id) && (!latest || s.date > latest)) latest = s.date; });
     return latest;
   }
-  function recentDays(limit) {
-    const byDate = new Map();
-    fitnessSets.forEach(s => {
-      if (!byDate.has(s.date)) byDate.set(s.date, new Set());
-      byDate.get(s.date).add(s.exercise_id);
-    });
-    return Array.from(byDate.entries())
-      .map(([date, exSet]) => ({ date, exerciseCount: exSet.size }))
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, limit);
-  }
 
   /* ============ View switching ============ */
   function showView(view) {
@@ -703,27 +666,13 @@ button, input, select { font-family: var(--font); }
       );
     }).join('');
   }
-  function renderRecentWorkouts() {
-    const days = recentDays(8);
-    $('recentList').innerHTML = days.length ? days.map(d => (
-      '<li class="fl-recent-row" data-date="' + d.date + '">' +
-        '<span class="fl-recent-name">Workout</span>' +
-        '<span class="fl-recent-meta">' + fmtRelative(d.date) + ' · ' + d.exerciseCount + ' exercises</span>' +
-      '</li>'
-    )).join('') : '<li class="fl-empty">No workouts logged yet.</li>';
-  }
   function renderHome() {
     renderHomeSummary();
     renderRoutinesGrid();
-    renderRecentWorkouts();
   }
   $('routinesGrid').addEventListener('click', (e) => {
     const card = e.target.closest('.fl-routine-card');
     if (card) openRoutine(card.dataset.id);
-  });
-  $('recentList').addEventListener('click', (e) => {
-    const row = e.target.closest('.fl-recent-row');
-    if (row) openDayDetail(row.dataset.date);
   });
 
   /* ============ ROUTINE screen: browse, log, manage ============ */
@@ -978,30 +927,6 @@ button, input, select { font-family: var(--font); }
   $('historyLink').addEventListener('click', openHistory);
   $('historyModalClose').addEventListener('click', () => $('historyModal').classList.remove('show'));
   $('historyModal').addEventListener('click', (e) => { if (e.target.id === 'historyModal') $('historyModal').classList.remove('show'); });
-
-  /* ============ Day detail (read-only, from recent workouts) ============ */
-  function openDayDetail(dateKey) {
-    $('dayDetailTitle').textContent = 'Workout — ' + fmtDateShort(dateKey);
-    const byExercise = new Map();
-    fitnessSets.filter(s => s.date === dateKey).forEach(s => {
-      if (!byExercise.has(s.exercise_id)) byExercise.set(s.exercise_id, []);
-      byExercise.get(s.exercise_id).push(s);
-    });
-    const body = Array.from(byExercise.entries()).map(([exId, sets]) => {
-      const ex = exerciseById(exId);
-      sets.sort((a, b) => a.set_number - b.set_number);
-      return (
-        '<div class="fl-session-block">' +
-          '<div class="fl-session-date">' + escapeHtml(ex ? ex.name : 'Exercise') + '</div>' +
-          sets.map(set => '<div class="fl-session-set">set ' + set.set_number + ' — <b>' + set.weight + ' ' + set.unit + '</b> × ' + set.reps + '</div>').join('') +
-        '</div>'
-      );
-    }).join('');
-    $('dayDetailBody').innerHTML = body || '<div class="fl-empty">No sets logged that day.</div>';
-    $('dayDetailModal').classList.add('show');
-  }
-  $('dayDetailClose').addEventListener('click', () => $('dayDetailModal').classList.remove('show'));
-  $('dayDetailModal').addEventListener('click', (e) => { if (e.target.id === 'dayDetailModal') $('dayDetailModal').classList.remove('show'); });
 
   /* ============ Boot ============ */
   async function boot() {
