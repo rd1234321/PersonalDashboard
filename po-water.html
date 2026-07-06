@@ -510,6 +510,25 @@ html, body {
   font-size: 11px; color: var(--text-3); font-style: italic;
   margin-top: 8px; line-height: 1.5;
 }
+.nutri-synced-note[hidden] { display: none; }
+
+.vitamin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; }
+.vitamin-item { min-width: 0; }
+.vitamin-label {
+  display: flex; justify-content: space-between; gap: 6px;
+  font-size: 10px; letter-spacing: 0.06em; color: var(--text-3);
+  margin-bottom: 6px; font-family: var(--font-mono); white-space: nowrap;
+}
+.vitamin-label span:first-child { color: var(--text-1); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.vitamin-track {
+  height: 5px; background: rgba(63,217,255,0.06); border: 1px solid var(--border);
+  overflow: hidden;
+}
+.vitamin-fill { height: 100%; background: var(--good); transition: width 0.4s ease; }
+.vitamin-fill.over { background: var(--warn); }
+@media (max-width: 560px) {
+  .vitamin-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 @media (max-width: 560px) {
   .nutri-macros { grid-template-columns: repeat(2, 1fr); }
@@ -630,6 +649,14 @@ html, body {
       <svg class="spark-svg" id="sparkSvg" viewBox="0 0 280 70" preserveAspectRatio="none"></svg>
     </div>
     <div id="histList" style="margin-top:14px"></div>
+  </div>
+
+  <div class="divider"><span>VITAMINS</span></div>
+
+  <div class="card">
+    <div class="ah-sync-badge" id="vitaminSyncBadge" hidden>🍎 Synced from Apple Health · <span id="vitaminSyncWhen">just now</span></div>
+    <div class="vitamin-grid" id="vitaminGrid"></div>
+    <div class="nutri-synced-note" id="vitaminEmptyNote">Logged via a food-tracking app → Apple Health. Nothing synced yet today.</div>
   </div>
 </div>
 
@@ -1387,6 +1414,55 @@ document.addEventListener('DOMContentLoaded', function () {
     if (s < 86400) return Math.floor(s / 3600) + ' h ago';
     return Math.floor(s / 86400) + ' d ago';
   }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  // General adult daily values (FDA label reference), used only to size the
+  // progress bar — Apple Health already reports the amount + its own units,
+  // those are shown as-is rather than converted.
+  const VITAMIN_DV = {
+    vitamin_a: { label: 'Vitamin A', dv: 900 },
+    vitamin_c: { label: 'Vitamin C', dv: 90 },
+    vitamin_d: { label: 'Vitamin D', dv: 20 },
+    vitamin_e: { label: 'Vitamin E', dv: 15 },
+    vitamin_k: { label: 'Vitamin K', dv: 120 },
+    vitamin_b1_thiamine: { label: 'B1 (Thiamin)', dv: 1.2 },
+    vitamin_b2_riboflavin: { label: 'B2 (Riboflavin)', dv: 1.3 },
+    vitamin_b3_niacin: { label: 'B3 (Niacin)', dv: 16 },
+    vitamin_b5_pantothenic_acid: { label: 'B5 (Pantothenic)', dv: 5 },
+    vitamin_b6_pyridoxine: { label: 'B6', dv: 1.7 },
+    vitamin_b7_biotin: { label: 'B7 (Biotin)', dv: 30 },
+    vitamin_b9_folate: { label: 'B9 (Folate)', dv: 400 },
+    vitamin_b12: { label: 'B12', dv: 2.4 },
+  };
+  function renderVitamins(metrics, today) {
+    const grid = document.getElementById('vitaminGrid');
+    const note = document.getElementById('vitaminEmptyNote');
+    const badge = document.getElementById('vitaminSyncBadge');
+    if (!grid) return;
+    const rows = Object.keys(VITAMIN_DV)
+      .map(key => ({ key: key, m: metrics[key], def: VITAMIN_DV[key] }))
+      .filter(r => r.m && r.m.date === today);
+    if (!rows.length) {
+      grid.innerHTML = '';
+      if (note) note.hidden = false;
+      if (badge) badge.hidden = true;
+      return;
+    }
+    if (note) note.hidden = true;
+    if (badge) badge.hidden = false;
+    grid.innerHTML = rows.map(r => {
+      const pct = r.def.dv ? Math.min(100, (r.m.value / r.def.dv) * 100) : 0;
+      const over = r.m.value > r.def.dv;
+      return (
+        '<div class="vitamin-item">' +
+          '<div class="vitamin-label"><span>' + escapeHtml(r.def.label) + '</span><span>' + Math.round(r.m.value * 10) / 10 + (r.m.units || '') + '</span></div>' +
+          '<div class="vitamin-track"><div class="vitamin-fill' + (over ? ' over' : '') + '" style="width:' + pct + '%"></div></div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
   // HealthKit stores volume as a real quantity; Health Auto Export exports
   // it in whichever unit string it reports. Only convert units we can be
   // sure about — anything unrecognized is shown as-is rather than guessed.
@@ -1450,6 +1526,10 @@ document.addEventListener('DOMContentLoaded', function () {
           if (window.__renderWater) window.__renderWater();
         }
       }
+
+      renderVitamins(metrics, today);
+      const vitaminWhen = document.getElementById('vitaminSyncWhen');
+      if (vitaminWhen) vitaminWhen.textContent = relTime(updatedAt);
     } catch (e) { /* offline or not set up yet — manual tracking still works */ }
   }
 
