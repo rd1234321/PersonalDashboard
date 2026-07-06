@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="lock.js"></script>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#02040a">
+<meta name="color-scheme" content="dark">
+<title>Fitness Log · Dashboard</title>
+<link rel="stylesheet" href="hud-theme.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-shim.js"></script>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --fl-bg: #02040a;
+  --fl-text: #e6f7fb;
+  --fl-muted: #4a6b78;
+  --fl-border: #12232b;
+  --fl-border-2: #0f1e26;
+  --fl-cyan: #3fd9ff;
+  --fl-teal: #4dd6a8;
+  --font: 'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; background: var(--fl-bg); color: var(--fl-text);
+  font-family: var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+body { min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 20px 60px; }
+.page { max-width: 1400px; margin: 0 auto; }
+
+/* ----- header ----- */
+.fl-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap; margin-bottom: 22px;
+}
+.fl-title-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.fl-title {
+  margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em;
+  line-height: 1.15; color: var(--fl-text);
+}
+.fl-session {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--fl-muted); font-family: var(--font);
+}
+.fl-session-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--fl-teal);
+  box-shadow: 0 0 6px var(--fl-teal); animation: fl-pulse 2.2s ease-in-out infinite;
+}
+@keyframes fl-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.fl-log-btn {
+  padding: 13px 22px; border: 1px solid var(--fl-border-2); border-radius: 10px;
+  background: transparent; color: var(--fl-text); font-family: var(--font);
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.fl-log-btn:hover { border-color: var(--fl-cyan); background: rgba(63,217,255,0.06); }
+
+/* ----- muscle group tabs ----- */
+.fl-tabs {
+  display: flex; gap: 28px; border-bottom: 1px solid var(--fl-border); margin-bottom: 24px;
+  overflow-x: auto;
+}
+.fl-tab {
+  background: none; border: 0; padding: 10px 2px 12px; margin-bottom: -1px;
+  font-family: var(--font); font-size: 15px; color: var(--fl-muted); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+}
+.fl-tab:hover { color: var(--fl-text); }
+.fl-tab.on { color: var(--fl-cyan); border-bottom-color: var(--fl-cyan); }
+
+/* ----- bracket-corner card ----- */
+.fl-card {
+  position: relative; padding: 20px 22px 22px; margin-bottom: 20px;
+}
+.fl-card::before, .fl-card::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+}
+.fl-card::before { top: 0; left: 0; border-top: 1px solid var(--fl-cyan); border-left: 1px solid var(--fl-cyan); }
+.fl-card::after  { bottom: 0; right: 0; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
+.fl-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.fl-card-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--fl-text);
+  display: flex; align-items: center; gap: 8px;
+}
+.fl-card-title .diamond { color: var(--fl-cyan); font-size: 11px; }
+.fl-link {
+  font-size: 12.5px; color: var(--fl-muted); text-decoration: none; cursor: pointer;
+  background: none; border: 0; font-family: var(--font); padding: 0;
+}
+.fl-link:hover { color: var(--fl-cyan); }
+
+/* ----- two-column layout ----- */
+.fl-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .fl-cols { grid-template-columns: 1fr; } }
+
+/* ----- exercise list ----- */
+.fl-ex-list { list-style: none; margin: 0; padding: 0; }
+.fl-ex-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 12px; cursor: pointer; border-bottom: 1px solid var(--fl-border);
+  transition: background 0.15s;
+}
+.fl-ex-row:last-child { border-bottom: 0; }
+.fl-ex-row:hover { background: rgba(63,217,255,0.04); }
+.fl-ex-row.on { background: rgba(63,217,255,0.09); }
+.fl-ex-name { font-size: 15px; color: var(--fl-text); }
+.fl-ex-last { font-size: 12.5px; color: var(--fl-muted); text-align: right; white-space: nowrap; }
+
+/* ----- log panel ----- */
+.fl-log-fields { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 18px; }
+.fl-field { flex: 1; min-width: 100px; }
+.fl-field label { display: block; font-size: 11.5px; color: var(--fl-muted); margin-bottom: 8px; }
+.fl-field input {
+  width: 100%; padding: 12px 12px; border: 1px solid var(--fl-border-2); border-radius: 8px;
+  background: rgba(255,255,255,0.02); color: var(--fl-text); font-family: var(--font);
+  font-size: 20px; outline: none; transition: border-color 0.15s;
+}
+.fl-field input:focus { border-color: var(--fl-cyan); }
+.fl-unit-toggle {
+  display: inline-flex; border: 1px solid var(--fl-border-2); border-radius: 8px; overflow: hidden;
+}
+.fl-unit-toggle button {
+  border: 0; background: transparent; color: var(--fl-muted); font-family: var(--font);
+  font-size: 12px; font-weight: 700; padding: 12px 12px; cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.fl-unit-toggle button.on { background: rgba(63,217,255,0.14); color: var(--fl-cyan); }
+.fl-add-btn {
+  flex-shrink: 0; padding: 15px 20px; border: 1px solid var(--fl-border-2); border-radius: 10px;
+  background: transparent; color: var(--fl-text); font-family: var(--font); font-size: 14px;
+  font-weight: 700; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.fl-add-btn:hover { border-color: var(--fl-teal); background: rgba(77,214,168,0.08); }
+.fl-sets-label { font-size: 11.5px; color: var(--fl-muted); margin-bottom: 10px; }
+.fl-set-list { list-style: none; margin: 0; padding: 0; }
+.fl-set-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 14px; margin-bottom: 8px; border: 1px solid var(--fl-border-2); border-radius: 8px;
+  background: rgba(63,217,255,0.05); font-size: 14px;
+}
+.fl-set-row .num { font-weight: 700; }
+.fl-set-row .val { font-family: var(--font); color: var(--fl-text); }
+.fl-set-row.placeholder {
+  border-style: dashed; border-color: var(--fl-border-2); background: transparent; color: var(--fl-muted);
+}
+.fl-set-del {
+  background: none; border: 0; color: var(--fl-muted); font-size: 16px; cursor: pointer; padding: 0 4px;
+}
+.fl-set-del:hover { color: #e0605c; }
+
+/* ----- progress chart ----- */
+.fl-empty { font-size: 13px; color: var(--fl-muted); font-style: italic; padding: 30px 0; text-align: center; }
+.fl-chart-wrap { position: relative; width: 100%; }
+.fl-chart-wrap svg { width: 100%; height: 220px; display: block; overflow: visible; }
+#flChartLine { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: fl-draw 1.1s ease-out forwards; }
+@keyframes fl-draw { to { stroke-dashoffset: 0; } }
+.fl-chart-axis { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--fl-muted); }
+.fl-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 22px; }
+.fl-stat { }
+.fl-stat .k { font-size: 11px; color: var(--fl-muted); margin-bottom: 6px; }
+.fl-stat .v { font-size: 22px; font-weight: 700; color: var(--fl-text); }
+.fl-stat .v.up { color: var(--fl-teal); }
+@media (max-width: 560px) { .fl-stats-row { grid-template-columns: 1fr; } }
+
+/* ----- history modal ----- */
+.fl-modal-bg {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50;
+  align-items: flex-start; justify-content: center; padding: 40px 16px;
+  overflow-y: auto;
+}
+.fl-modal-bg.show { display: flex; }
+.fl-modal {
+  position: relative; width: 100%; max-width: 640px; background: #050a0f;
+  border: 1px solid var(--fl-border-2); border-radius: 12px; padding: 24px;
+}
+.fl-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.fl-modal-head h3 { margin: 0; font-size: 16px; color: var(--fl-text); }
+.fl-modal-close {
+  background: none; border: 0; color: var(--fl-muted); font-size: 22px; cursor: pointer; line-height: 1;
+}
+.fl-modal-close:hover { color: var(--fl-text); }
+.fl-session-block { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--fl-border); }
+.fl-session-block:last-child { border-bottom: 0; }
+.fl-session-date { font-size: 13px; font-weight: 700; color: var(--fl-cyan); margin-bottom: 8px; }
+.fl-session-set { font-size: 13px; color: var(--fl-muted); padding: 3px 0; }
+.fl-session-set b { color: var(--fl-text); font-weight: 600; }
+</style>
+</head>
+<body class="hud-grid">
+<div class="page">
+
+  <div class="fl-header">
+    <div class="fl-title-wrap">
+      <h1 class="fl-title">fitness<br>log</h1>
+      <div class="fl-session"><span class="fl-session-dot"></span>session active</div>
+    </div>
+    <button class="fl-log-btn" id="flLogWorkoutBtn" type="button">+ log workout</button>
+  </div>
+
+  <div class="fl-tabs" id="flTabs"></div>
+
+  <div class="fl-cols">
+    <div class="fl-card">
+      <div class="fl-card-head">
+        <span class="fl-card-title"><span class="diamond">◆</span><span id="flListTitle">chest exercises</span></span>
+      </div>
+      <ul class="fl-ex-list" id="flExList"></ul>
+    </div>
+
+    <div class="fl-card">
+      <div class="fl-card-head">
+        <span class="fl-card-title"><span class="diamond">◆</span><span id="flLogTitle">select an exercise</span> · log set</span>
+      </div>
+      <div class="fl-log-fields">
+        <div class="fl-field">
+          <label id="flWeightLabel">weight (lb)</label>
+          <input type="number" id="flWeightInput" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="fl-field">
+          <label>reps</label>
+          <input type="number" id="flRepsInput" inputmode="numeric" placeholder="0">
+        </div>
+        <div class="fl-unit-toggle" id="flUnitToggle">
+          <button data-unit="lb" class="on" type="button">lb</button>
+          <button data-unit="kg" type="button">kg</button>
+        </div>
+        <button class="fl-add-btn" id="flAddSetBtn" type="button">+ add set</button>
+      </div>
+      <div class="fl-sets-label">sets today</div>
+      <ul class="fl-set-list" id="flSetList"></ul>
+    </div>
+  </div>
+
+  <div class="fl-card">
+    <div class="fl-card-head">
+      <span class="fl-card-title"><span class="diamond">◆</span><span id="flProgTitle">select an exercise</span> · progress</span>
+      <button class="fl-link" id="flHistoryLink" type="button">full history ›</button>
+    </div>
+    <div id="flProgressBody"></div>
+  </div>
+
+</div>
+
+<div class="fl-modal-bg" id="flHistoryModal">
+  <div class="fl-modal">
+    <div class="fl-modal-head">
+      <h3 id="flHistoryModalTitle">History</h3>
+      <button class="fl-modal-close" id="flHistoryClose" type="button">&times;</button>
+    </div>
+    <div id="flHistoryBody"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  const FL_SUPABASE_URL = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+  const FL_SUPABASE_KEY = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  let flClient = null;
+  function client() {
+    if (flClient) return flClient;
+    if (!window.supabase) return null;
+    flClient = window.supabase.createClient(FL_SUPABASE_URL, FL_SUPABASE_KEY);
+    return flClient;
+  }
+
+  const MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core'];
+
+  // Seeded once into the 'exercise_library' app_state row — after that,
+  // this stored copy is the source of truth, so exercises can be added
+  // later (from this page or directly in Supabase) without a redeploy.
+  const SEED_EXERCISES = [
+    { name: 'Bench Press', muscle_group: 'chest', equipment: 'barbell' },
+    { name: 'Incline Bench Press', muscle_group: 'chest', equipment: 'barbell' },
+    { name: 'Dumbbell Press', muscle_group: 'chest', equipment: 'dumbbell' },
+    { name: 'Push-ups', muscle_group: 'chest', equipment: 'bodyweight' },
+    { name: 'Cable Fly', muscle_group: 'chest', equipment: 'cable' },
+    { name: 'Dips', muscle_group: 'chest', equipment: 'bodyweight' },
+    { name: 'Deadlift', muscle_group: 'back', equipment: 'barbell' },
+    { name: 'Pull-ups', muscle_group: 'back', equipment: 'bodyweight' },
+    { name: 'Barbell Row', muscle_group: 'back', equipment: 'barbell' },
+    { name: 'Lat Pulldown', muscle_group: 'back', equipment: 'cable' },
+    { name: 'Seated Cable Row', muscle_group: 'back', equipment: 'cable' },
+    { name: 'Face Pull', muscle_group: 'back', equipment: 'cable' },
+    { name: 'Squat', muscle_group: 'legs', equipment: 'barbell' },
+    { name: 'Leg Press', muscle_group: 'legs', equipment: 'machine' },
+    { name: 'Romanian Deadlift', muscle_group: 'legs', equipment: 'barbell' },
+    { name: 'Lunges', muscle_group: 'legs', equipment: 'dumbbell' },
+    { name: 'Leg Curl', muscle_group: 'legs', equipment: 'machine' },
+    { name: 'Leg Extension', muscle_group: 'legs', equipment: 'machine' },
+    { name: 'Calf Raise', muscle_group: 'legs', equipment: 'machine' },
+    { name: 'Overhead Press', muscle_group: 'shoulders', equipment: 'barbell' },
+    { name: 'Lateral Raise', muscle_group: 'shoulders', equipment: 'dumbbell' },
+    { name: 'Front Raise', muscle_group: 'shoulders', equipment: 'dumbbell' },
+    { name: 'Rear Delt Fly', muscle_group: 'shoulders', equipment: 'dumbbell' },
+    { name: 'Arnold Press', muscle_group: 'shoulders', equipment: 'dumbbell' },
+    { name: 'Barbell Curl', muscle_group: 'arms', equipment: 'barbell' },
+    { name: 'Dumbbell Curl', muscle_group: 'arms', equipment: 'dumbbell' },
+    { name: 'Tricep Pushdown', muscle_group: 'arms', equipment: 'cable' },
+    { name: 'Skull Crushers', muscle_group: 'arms', equipment: 'barbell' },
+    { name: 'Hammer Curl', muscle_group: 'arms', equipment: 'dumbbell' },
+    { name: 'Plank', muscle_group: 'core', equipment: 'bodyweight' },
+    { name: 'Hanging Leg Raise', muscle_group: 'core', equipment: 'bodyweight' },
+    { name: 'Cable Crunch', muscle_group: 'core', equipment: 'cable' },
+    { name: 'Russian Twist', muscle_group: 'core', equipment: 'bodyweight' },
+  ].map((e, i) => Object.assign({ id: slugify(e.name) }, e));
+
+  function slugify(name) { return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
+  function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function fmtDateShort(dateKey) {
+    const d = new Date(dateKey + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  let exerciseLibrary = [];
+  let fitnessSets = [];
+  let activeGroup = 'chest';
+  let activeExerciseId = null;
+  let activeUnit = 'lb';
+
+  async function loadLibrary() {
+    const c = client();
+    if (!c) { exerciseLibrary = SEED_EXERCISES; return; }
+    try {
+      const { data } = await c.from('app_state').select('data').eq('key', 'exercise_library').maybeSingle();
+      if (data && data.data && Array.isArray(data.data.exercises) && data.data.exercises.length) {
+        exerciseLibrary = data.data.exercises;
+      } else {
+        exerciseLibrary = SEED_EXERCISES;
+        await saveLibrary();
+      }
+    } catch (e) { exerciseLibrary = SEED_EXERCISES; }
+  }
+  async function saveLibrary() {
+    const c = client();
+    if (!c) return;
+    try { await c.from('app_state').upsert({ key: 'exercise_library', data: { exercises: exerciseLibrary } }); } catch (e) {}
+  }
+  async function loadSets() {
+    const c = client();
+    if (!c) return;
+    try {
+      const { data } = await c.from('app_state').select('data').eq('key', 'fitness_sets').maybeSingle();
+      fitnessSets = (data && data.data && Array.isArray(data.data.sets)) ? data.data.sets : [];
+    } catch (e) { fitnessSets = []; }
+  }
+  async function saveSets() {
+    const c = client();
+    if (!c) return;
+    try { await c.from('app_state').upsert({ key: 'fitness_sets', data: { sets: fitnessSets } }); } catch (e) {}
+  }
+
+  function exercisesInGroup(group) { return exerciseLibrary.filter(e => e.muscle_group === group); }
+  function exerciseById(id) { return exerciseLibrary.find(e => e.id === id) || null; }
+  function setsForExercise(id) { return fitnessSets.filter(s => s.exercise_id === id); }
+  function setsToday(id) { return setsForExercise(id).filter(s => s.date === todayKey()).sort((a, b) => a.set_number - b.set_number); }
+  function lastSetFor(id) {
+    const all = setsForExercise(id).slice().sort((a, b) => (a.date + a.set_number).localeCompare(b.date + b.set_number));
+    return all.length ? all[all.length - 1] : null;
+  }
+  function lastUnitFor(id) {
+    const last = lastSetFor(id);
+    return (last && last.unit) || 'lb';
+  }
+  // Sets sharing the same date are one "session" — no separate table needed.
+  function sessionsFor(id) {
+    const byDate = new Map();
+    setsForExercise(id).forEach(s => {
+      if (!byDate.has(s.date)) byDate.set(s.date, []);
+      byDate.get(s.date).push(s);
+    });
+    return Array.from(byDate.entries())
+      .map(([date, sets]) => ({ date, sets: sets.slice().sort((a, b) => a.set_number - b.set_number) }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /* ============ Tabs + exercise list ============ */
+  function renderTabs() {
+    $('flTabs').innerHTML = MUSCLE_GROUPS.map(g =>
+      '<button class="fl-tab' + (g === activeGroup ? ' on' : '') + '" data-group="' + g + '" type="button">' + g + '</button>'
+    ).join('');
+  }
+  $('flTabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.fl-tab');
+    if (!btn) return;
+    activeGroup = btn.dataset.group;
+    const inGroup = exercisesInGroup(activeGroup);
+    if (!activeExerciseId || !inGroup.some(ex => ex.id === activeExerciseId)) {
+      activeExerciseId = inGroup.length ? inGroup[0].id : null;
+    }
+    renderAll();
+  });
+
+  function renderExerciseList() {
+    $('flListTitle').textContent = activeGroup + ' exercises';
+    const list = exercisesInGroup(activeGroup);
+    $('flExList').innerHTML = list.map(ex => {
+      const last = lastSetFor(ex.id);
+      const lastText = last ? ('last: ' + last.weight + last.unit + '×' + last.reps) : 'last: —';
+      return (
+        '<li class="fl-ex-row' + (ex.id === activeExerciseId ? ' on' : '') + '" data-id="' + ex.id + '">' +
+          '<span class="fl-ex-name">' + escapeHtml(ex.name) + '</span>' +
+          '<span class="fl-ex-last">' + escapeHtml(lastText) + '</span>' +
+        '</li>'
+      );
+    }).join('') || '<li class="fl-empty">No exercises in this group.</li>';
+  }
+  $('flExList').addEventListener('click', (e) => {
+    const row = e.target.closest('.fl-ex-row');
+    if (!row) return;
+    activeExerciseId = row.dataset.id;
+    activeUnit = lastUnitFor(activeExerciseId);
+    renderAll();
+  });
+
+  /* ============ Log panel ============ */
+  function renderLogPanel() {
+    const ex = exerciseById(activeExerciseId);
+    $('flLogTitle').textContent = ex ? ex.name : 'select an exercise';
+    $('flWeightLabel').textContent = 'weight (' + activeUnit + ')';
+    $('flUnitToggle').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.unit === activeUnit));
+
+    const today = ex ? setsToday(ex.id) : [];
+    const rows = today.map(s =>
+      '<li class="fl-set-row"><span class="num">set ' + s.set_number + '</span><span class="val">' + s.weight + ' ' + s.unit + ' × ' + s.reps + '</span><button class="fl-set-del" data-id="' + s.id + '" aria-label="Delete">&times;</button></li>'
+    ).join('');
+    const placeholder = ex ? '<li class="fl-set-row placeholder"><span class="num">set ' + (today.length + 1) + '</span><span>—</span></li>' : '';
+    $('flSetList').innerHTML = rows + placeholder;
+  }
+  $('flUnitToggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    activeUnit = btn.dataset.unit;
+    renderLogPanel();
+  });
+  $('flSetList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.fl-set-del');
+    if (!btn) return;
+    fitnessSets = fitnessSets.filter(s => s.id !== btn.dataset.id);
+    saveSets();
+    renderAll();
+  });
+  async function addSet() {
+    if (!activeExerciseId) return;
+    const weight = parseFloat($('flWeightInput').value);
+    const reps = parseInt($('flRepsInput').value, 10);
+    if (!(weight >= 0) || !(reps >= 0)) return;
+    const today = setsToday(activeExerciseId);
+    const entry = {
+      id: 'fs' + Date.now() + Math.random().toString(36).slice(2, 6),
+      exercise_id: activeExerciseId,
+      date: todayKey(),
+      set_number: today.length + 1,
+      weight: weight,
+      reps: reps,
+      unit: activeUnit,
+    };
+    fitnessSets.push(entry);
+    await saveSets(); // one set = one write, nothing lost if the session is interrupted
+    $('flRepsInput').value = '';
+    $('flWeightInput').focus();
+    renderAll();
+  }
+  $('flAddSetBtn').addEventListener('click', addSet);
+  $('flRepsInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addSet(); });
+  $('flWeightInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addSet(); });
+  $('flLogWorkoutBtn').addEventListener('click', () => { $('flWeightInput').focus(); });
+
+  /* ============ Progress chart ============ */
+  function chartSVG(points, w, h) {
+    if (!points || points.length < 2) return '';
+    const vals = points.map(p => p.v);
+    const min = Math.min(...vals), max = Math.max(...vals, min + 0.0001);
+    const n = points.length, pad = 24;
+    const xAt = i => (i / (n - 1)) * (w - pad * 2) + pad;
+    const yAt = v => (h - pad) - ((v - min) / (max - min)) * (h - pad * 2);
+    const line = points.map((p, i) => xAt(i).toFixed(1) + ',' + yAt(p.v).toFixed(1)).join(' L ');
+    const dots = points.map((p, i) =>
+      '<circle cx="' + xAt(i).toFixed(1) + '" cy="' + yAt(p.v).toFixed(1) + '" r="4.5" fill="#4dd6a8"/>'
+    ).join('');
+    return (
+      '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+        '<line x1="' + pad + '" y1="' + (h - pad) + '" x2="' + (w - pad) + '" y2="' + (h - pad) + '" stroke="#12232b" stroke-width="1"/>' +
+        '<path id="flChartLine" d="M ' + line + '" fill="none" stroke="#4dd6a8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+        dots +
+      '</svg>'
+    );
+  }
+  function renderProgress() {
+    const ex = exerciseById(activeExerciseId);
+    $('flProgTitle').textContent = ex ? ex.name : 'select an exercise';
+    const body = $('flProgressBody');
+    if (!ex) { body.innerHTML = '<div class="fl-empty">Select an exercise to see its progress.</div>'; return; }
+    const sessions = sessionsFor(ex.id);
+    if (!sessions.length) {
+      body.innerHTML = '<div class="fl-empty">No sets logged yet for ' + escapeHtml(ex.name) + '.</div>';
+      return;
+    }
+    // Top set weight per session, last ~8 weeks (or everything if there's less).
+    const cutoff = Date.now() - 56 * 86400000;
+    let windowed = sessions.filter(s => new Date(s.date + 'T00:00:00').getTime() >= cutoff);
+    if (windowed.length < 2) windowed = sessions;
+    const points = windowed.map(s => ({ date: s.date, v: Math.max(...s.sets.map(x => x.weight)) }));
+
+    const latestSession = sessions[sessions.length - 1];
+    const topSet = Math.max(...fitnessSets.filter(s => s.exercise_id === ex.id).map(s => s.weight));
+    const totalVolume = latestSession.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+    const unit = latestSession.sets[0].unit || 'lb';
+    const change = points.length >= 2 ? (points[points.length - 1].v - points[0].v) : 0;
+    const changeSign = change > 0 ? '▲' : (change < 0 ? '▼' : '');
+
+    let chartHtml = '<div class="fl-empty">Log at least two sessions to chart a trend.</div>';
+    let axisHtml = '';
+    if (points.length >= 2) {
+      chartHtml = '<div class="fl-chart-wrap">' + chartSVG(points, 640, 220) + '</div>';
+      axisHtml = '<div class="fl-chart-axis"><span>' + fmtDateShort(points[0].date) + '</span><span>today</span></div>';
+    }
+
+    body.innerHTML = (
+      chartHtml + axisHtml +
+      '<div class="fl-stats-row">' +
+        '<div class="fl-stat"><div class="k">top set</div><div class="v">' + topSet + ' ' + unit + '</div></div>' +
+        '<div class="fl-stat"><div class="k">total volume</div><div class="v">' + totalVolume.toLocaleString() + ' ' + unit + '</div></div>' +
+        '<div class="fl-stat"><div class="k">since ' + fmtDateShort(points[0].date) + '</div><div class="v' + (change > 0 ? ' up' : '') + '">' + changeSign + ' ' + Math.abs(change) + ' ' + unit + '</div></div>' +
+      '</div>'
+    );
+  }
+
+  /* ============ Full history modal ============ */
+  function openHistory() {
+    const ex = exerciseById(activeExerciseId);
+    if (!ex) return;
+    $('flHistoryModalTitle').textContent = ex.name + ' — full history';
+    const sessions = sessionsFor(ex.id).slice().reverse();
+    $('flHistoryBody').innerHTML = sessions.length ? sessions.map(s => (
+      '<div class="fl-session-block">' +
+        '<div class="fl-session-date">' + fmtDateShort(s.date) + '</div>' +
+        s.sets.map(set => '<div class="fl-session-set">set ' + set.set_number + ' — <b>' + set.weight + ' ' + set.unit + '</b> × ' + set.reps + '</div>').join('') +
+      '</div>'
+    )).join('') : '<div class="fl-empty">No history yet.</div>';
+    $('flHistoryModal').classList.add('show');
+  }
+  $('flHistoryLink').addEventListener('click', openHistory);
+  $('flHistoryClose').addEventListener('click', () => $('flHistoryModal').classList.remove('show'));
+  $('flHistoryModal').addEventListener('click', (e) => { if (e.target.id === 'flHistoryModal') $('flHistoryModal').classList.remove('show'); });
+
+  function renderAll() {
+    renderTabs();
+    renderExerciseList();
+    renderLogPanel();
+    renderProgress();
+  }
+
+  async function boot() {
+    await loadLibrary();
+    await loadSets();
+    const inGroup = exercisesInGroup(activeGroup);
+    activeExerciseId = inGroup.length ? inGroup[0].id : null;
+    activeUnit = activeExerciseId ? lastUnitFor(activeExerciseId) : 'lb';
+    renderAll();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
