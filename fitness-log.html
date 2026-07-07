@@ -31,7 +31,7 @@ html, body {
   font-family: var(--font); font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 body { min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 20px 60px; }
-.page { max-width: 1400px; margin: 0 auto; }
+.page { max-width: 900px; margin: 0 auto; }
 .page[hidden] { display: none; }
 button, input, select { font-family: var(--font); }
 
@@ -65,19 +65,6 @@ button, input, select { font-family: var(--font); }
 }
 .fl-section-title::after { content: ''; flex: 1; height: 1px; background: var(--fl-border); }
 
-/* ----- muscle group tabs (used in the add-exercise picker) ----- */
-.fl-tabs {
-  display: flex; gap: 24px; border-bottom: 1px solid var(--fl-border); margin-bottom: 18px;
-  overflow-x: auto;
-}
-.fl-tab {
-  background: none; border: 0; padding: 9px 2px 12px; margin-bottom: -1px;
-  font-size: 15px; color: var(--fl-muted); cursor: pointer;
-  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
-}
-.fl-tab:hover { color: var(--fl-text); }
-.fl-tab.on { color: var(--fl-cyan); border-bottom-color: var(--fl-cyan); }
-
 /* ----- card: full border box + small accent brackets on opposite corners ----- */
 .fl-card {
   position: relative; padding: 22px 24px 24px; margin-bottom: 20px;
@@ -88,48 +75,75 @@ button, input, select { font-family: var(--font); }
 }
 .fl-card::before { top: -1px; left: -1px; border-top: 1px solid var(--fl-cyan); border-left: 1px solid var(--fl-cyan); }
 .fl-card::after  { bottom: -1px; right: -1px; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
-.fl-card-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin-bottom: 18px; flex-wrap: wrap;
-}
 .fl-card-title {
   font-size: 15px; font-weight: 700; letter-spacing: 0.01em; color: var(--fl-text);
-  display: flex; align-items: center; gap: 9px;
+  display: flex; align-items: center; gap: 9px; margin-bottom: 18px;
 }
 .fl-card-title .diamond { color: var(--fl-cyan); font-size: 12px; }
-.fl-link {
-  font-size: 13.5px; color: var(--fl-muted); text-decoration: none; cursor: pointer;
-  background: none; border: 0; padding: 0;
+
+/* ----- home: summary strip ----- */
+.fl-summary-strip {
+  display: grid; grid-template-columns: repeat(2, 1fr); position: relative;
+  padding: 20px 22px; margin-bottom: 20px; border: 1px solid rgba(74,107,120,0.35); border-radius: 4px;
 }
-.fl-link:hover { color: var(--fl-cyan); }
+.fl-summary-strip::before, .fl-summary-strip::after {
+  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+}
+.fl-summary-strip::before { top: -1px; left: -1px; border-top: 1px solid var(--fl-cyan); border-left: 1px solid var(--fl-cyan); }
+.fl-summary-strip::after  { bottom: -1px; right: -1px; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
+.fl-summary-stat { text-align: center; border-left: 1px solid var(--fl-border); }
+.fl-summary-stat:first-child { border-left: 0; }
+.fl-summary-stat .k { font-size: 12px; color: var(--fl-muted); margin-bottom: 8px; }
+.fl-summary-stat .v { font-size: 26px; font-weight: 700; color: var(--fl-teal); }
+.fl-summary-stat .u { font-size: 12px; color: var(--fl-muted); margin-top: 4px; }
 
-/* ----- two-column layout ----- */
-.fl-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-@media (max-width: 860px) { .fl-cols { grid-template-columns: 1fr; } }
+/* ----- log workout button ----- */
+.fl-log-btn {
+  width: 100%; padding: 16px 20px; border: 1px solid var(--fl-cyan); border-radius: 10px;
+  background: rgba(63,217,255,0.06); color: var(--fl-cyan);
+  font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s;
+  margin-bottom: 8px;
+}
+.fl-log-btn:hover { background: rgba(63,217,255,0.12); }
 
-/* ----- exercise list rows (routine screen + picker) ----- */
+/* ----- history list ----- */
+.fl-empty { font-size: 13px; color: var(--fl-muted); font-style: italic; padding: 30px 0; text-align: center; }
+.fl-history-list { list-style: none; margin: 0; padding: 0; }
+.fl-history-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 2px; cursor: pointer; border-bottom: 1px solid var(--fl-border); transition: background 0.15s;
+}
+.fl-history-row:last-child { border-bottom: 0; }
+.fl-history-row:hover { background: rgba(63,217,255,0.04); }
+.fl-history-date { font-size: 15px; font-weight: 700; color: var(--fl-text); white-space: nowrap; }
+.fl-history-groups { font-size: 13px; color: var(--fl-amber); margin-top: 3px; }
+.fl-history-meta { font-size: 13.5px; color: var(--fl-muted); text-align: right; white-space: nowrap; }
+
+/* ----- log-workout screen: muscle group chips ----- */
+.fl-chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
+.fl-chip {
+  padding: 10px 16px; border: 1px solid var(--fl-border-2); border-radius: 20px; background: transparent;
+  color: var(--fl-muted); font-size: 14px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.fl-chip:hover { border-color: var(--fl-cyan); color: var(--fl-text); }
+.fl-chip.on { background: rgba(63,217,255,0.14); border-color: var(--fl-cyan); color: var(--fl-cyan); font-weight: 700; }
+
+/* ----- exercise checklist ----- */
 .fl-ex-list { list-style: none; margin: 0; padding: 0; }
 .fl-ex-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 13px 12px; cursor: pointer; border-bottom: 1px solid var(--fl-border);
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 4px; cursor: pointer; border-bottom: 1px solid var(--fl-border);
   transition: background 0.15s;
 }
 .fl-ex-row:last-child { border-bottom: 0; }
 .fl-ex-row:hover { background: rgba(63,217,255,0.04); }
-.fl-ex-row.on { background: rgba(63,217,255,0.09); }
-.fl-ex-row.added { opacity: 0.55; }
-.fl-ex-name { font-size: 16px; color: var(--fl-text); flex: 1; min-width: 0; }
-.fl-ex-last { font-size: 13.5px; color: var(--fl-muted); text-align: right; white-space: nowrap; }
-.fl-ex-added-tag { font-size: 11px; color: var(--fl-amber); font-weight: 700; margin-left: 8px; }
-.fl-ex-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.fl-ex-move, .fl-ex-remove {
-  background: none; border: 1px solid var(--fl-border-2); border-radius: 6px; color: var(--fl-muted);
-  font-size: 12px; cursor: pointer; padding: 4px 7px; transition: color 0.15s, border-color 0.15s;
+.fl-ex-checkbox {
+  width: 20px; height: 20px; flex-shrink: 0; border: 1px solid var(--fl-border-2); border-radius: 5px;
+  display: flex; align-items: center; justify-content: center; color: transparent; transition: all 0.15s;
 }
-.fl-ex-move:hover { color: var(--fl-cyan); border-color: var(--fl-cyan); }
-.fl-ex-remove:hover { color: var(--fl-red); border-color: var(--fl-red); }
-.fl-ex-move:disabled { opacity: 0.3; cursor: default; }
-.fl-ex-move:disabled:hover { color: var(--fl-muted); border-color: var(--fl-border-2); }
+.fl-ex-row.checked .fl-ex-checkbox { background: var(--fl-teal); border-color: var(--fl-teal); color: #02040a; font-weight: 700; font-size: 13px; }
+.fl-ex-name { font-size: 16px; color: var(--fl-text); flex: 1; }
+.fl-ex-meta { font-size: 12.5px; color: var(--fl-muted); white-space: nowrap; }
 
 .fl-add-ex-btn {
   width: 100%; text-align: left; margin-top: 12px; padding: 13px 12px;
@@ -141,14 +155,14 @@ button, input, select { font-family: var(--font); }
 .fl-add-ex-btn[hidden] { display: none; }
 .fl-add-ex-form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .fl-add-ex-form[hidden] { display: none; }
-.fl-add-ex-input, .fl-add-ex-select, .fl-search-input {
+.fl-add-ex-input, .fl-add-ex-select {
   padding: 11px 12px; border: 1px solid rgba(74,107,120,0.35); border-radius: 8px;
   background: rgba(255,255,255,0.03); color: var(--fl-text);
   font-size: 14px; outline: none; transition: border-color 0.15s;
 }
 .fl-add-ex-input { flex: 2; min-width: 140px; }
 .fl-add-ex-select { flex: 1; min-width: 110px; }
-.fl-add-ex-input:focus, .fl-add-ex-select:focus, .fl-search-input:focus { border-color: var(--fl-cyan); }
+.fl-add-ex-input:focus, .fl-add-ex-select:focus { border-color: var(--fl-cyan); }
 .fl-add-ex-submit, .fl-add-ex-cancel {
   padding: 11px 16px; border-radius: 8px; font-size: 13px;
   font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -157,63 +171,21 @@ button, input, select { font-family: var(--font); }
 .fl-add-ex-submit:hover { background: rgba(77,214,168,0.1); }
 .fl-add-ex-cancel { border: 1px solid var(--fl-border-2); background: transparent; color: var(--fl-muted); }
 .fl-add-ex-cancel:hover { color: var(--fl-text); border-color: rgba(74,107,120,0.5); }
-.fl-search-input { width: 100%; margin-bottom: 14px; }
 
-/* ----- log panel ----- */
-.fl-log-fields { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 18px; }
-.fl-field { flex: 1; min-width: 100px; }
-.fl-field label { display: block; font-size: 13px; color: var(--fl-muted); margin-bottom: 9px; }
-.fl-field input {
-  width: 100%; padding: 13px 12px; border: 1px solid rgba(74,107,120,0.35); border-radius: 8px;
-  background: rgba(255,255,255,0.03); color: var(--fl-text);
-  font-size: 24px; outline: none; transition: border-color 0.15s;
+/* ----- log-workout footer ----- */
+.fl-log-footer {
+  position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding: 16px 0 4px; margin-top: 8px; background: var(--fl-bg);
 }
-.fl-field input:focus { border-color: var(--fl-cyan); }
-.fl-unit-toggle {
-  display: inline-flex; border: 1px solid var(--fl-border-2); border-radius: 8px; overflow: hidden;
+.fl-log-count { font-size: 13.5px; color: var(--fl-muted); }
+.fl-log-submit {
+  padding: 14px 24px; border: 1px solid var(--fl-teal); border-radius: 10px; background: rgba(77,214,168,0.1);
+  color: var(--fl-teal); font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s;
 }
-.fl-unit-toggle button {
-  border: 0; background: transparent; color: var(--fl-muted);
-  font-size: 12px; font-weight: 700; padding: 12px 12px; cursor: pointer; transition: background 0.15s, color 0.15s;
-}
-.fl-unit-toggle button.on { background: rgba(63,217,255,0.14); color: var(--fl-cyan); }
-.fl-add-btn {
-  flex-shrink: 0; padding: 15px 20px; border: 1px solid var(--fl-border-2); border-radius: 10px;
-  background: transparent; color: var(--fl-text); font-size: 14px;
-  font-weight: 700; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-}
-.fl-add-btn:hover { border-color: var(--fl-teal); background: rgba(77,214,168,0.08); }
-.fl-sets-label { font-size: 13px; color: var(--fl-muted); margin-bottom: 10px; }
-.fl-set-list { list-style: none; margin: 0; padding: 0; }
-.fl-set-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 13px 16px; margin-bottom: 8px; border: 1px solid rgba(74,107,120,0.3); border-radius: 8px;
-  background: rgba(63,217,255,0.06); font-size: 15px;
-}
-.fl-set-row .num { font-weight: 700; }
-.fl-set-row .val { color: var(--fl-text); }
-.fl-set-row.placeholder {
-  border-style: dashed; border-color: var(--fl-border-2); background: transparent; color: var(--fl-muted);
-}
-.fl-set-del {
-  background: none; border: 0; color: var(--fl-muted); font-size: 16px; cursor: pointer; padding: 0 4px;
-}
-.fl-set-del:hover { color: var(--fl-red); }
+.fl-log-submit:hover { background: rgba(77,214,168,0.18); }
+.fl-log-submit:disabled { opacity: 0.4; cursor: default; }
 
-/* ----- progress chart ----- */
-.fl-empty { font-size: 13px; color: var(--fl-muted); font-style: italic; padding: 30px 0; text-align: center; }
-.fl-chart-wrap { position: relative; width: 100%; }
-.fl-chart-wrap svg { width: 100%; height: 190px; display: block; overflow: visible; }
-.fl-chart-line { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: fl-draw 1.1s ease-out forwards; }
-@keyframes fl-draw { to { stroke-dashoffset: 0; } }
-.fl-chart-axis { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--fl-muted); }
-.fl-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 22px; }
-.fl-stat .k { font-size: 11px; color: var(--fl-muted); margin-bottom: 6px; }
-.fl-stat .v { font-size: 22px; font-weight: 700; color: var(--fl-text); }
-.fl-stat .v.up { color: var(--fl-teal); }
-@media (max-width: 560px) { .fl-stats-row { grid-template-columns: 1fr; } }
-
-/* ----- modal (shared: history, day detail, exercise picker) ----- */
+/* ----- modal (day detail) ----- */
 .fl-modal-bg {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50;
   align-items: flex-start; justify-content: center; padding: 40px 16px;
@@ -221,7 +193,7 @@ button, input, select { font-family: var(--font); }
 }
 .fl-modal-bg.show { display: flex; }
 .fl-modal {
-  position: relative; width: 100%; max-width: 640px; background: #050a0f;
+  position: relative; width: 100%; max-width: 560px; background: #050a0f;
   border: 1px solid var(--fl-border-2); border-radius: 12px; padding: 24px;
 }
 .fl-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 12px; }
@@ -230,45 +202,9 @@ button, input, select { font-family: var(--font); }
   background: none; border: 0; color: var(--fl-muted); font-size: 22px; cursor: pointer; line-height: 1; flex-shrink: 0;
 }
 .fl-modal-close:hover { color: var(--fl-text); }
-.fl-session-block { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--fl-border); }
-.fl-session-block:last-child { border-bottom: 0; }
-.fl-session-date { font-size: 13px; font-weight: 700; color: var(--fl-cyan); margin-bottom: 8px; }
-.fl-session-set { font-size: 13px; color: var(--fl-muted); padding: 3px 0; }
-.fl-session-set b { color: var(--fl-text); font-weight: 600; }
-
-/* ----- home: summary strip ----- */
-.fl-summary-strip {
-  display: grid; grid-template-columns: repeat(3, 1fr); position: relative;
-  padding: 20px 22px; margin-bottom: 20px; border: 1px solid rgba(74,107,120,0.35); border-radius: 4px;
-}
-.fl-summary-strip::before, .fl-summary-strip::after {
-  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
-}
-.fl-summary-strip::before { top: -1px; left: -1px; border-top: 1px solid var(--fl-cyan); border-left: 1px solid var(--fl-cyan); }
-.fl-summary-strip::after  { bottom: -1px; right: -1px; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
-.fl-summary-stat { text-align: center; border-left: 1px solid var(--fl-border); }
-.fl-summary-stat:first-child { border-left: 0; }
-.fl-summary-stat .k { font-size: 12px; color: var(--fl-muted); margin-bottom: 8px; }
-.fl-summary-stat .v { font-size: 26px; font-weight: 700; color: var(--fl-text); }
-.fl-summary-stat .v.teal { color: var(--fl-teal); }
-.fl-summary-stat .u { font-size: 12px; color: var(--fl-muted); margin-top: 4px; }
-@media (max-width: 640px) { .fl-summary-strip { grid-template-columns: 1fr; gap: 16px; } .fl-summary-stat { border-left: 0; border-top: 1px solid var(--fl-border); padding-top: 12px; } .fl-summary-stat:first-child { border-top: 0; padding-top: 0; } }
-
-/* ----- home: routine grid ----- */
-.fl-routines-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 6px; }
-@media (max-width: 640px) { .fl-routines-grid { grid-template-columns: 1fr; } }
-.fl-routine-card {
-  position: relative; padding: 20px 22px; border: 1px solid rgba(74,107,120,0.35); border-radius: 4px;
-  cursor: pointer; transition: border-color 0.15s, background 0.15s;
-}
-.fl-routine-card:hover { background: rgba(63,217,255,0.04); border-color: rgba(63,217,255,0.5); }
-.fl-routine-card::before, .fl-routine-card::after {
-  content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
-}
-.fl-routine-card::before { top: -1px; left: -1px; border-top: 1px solid var(--fl-cyan); border-left: 1px solid var(--fl-cyan); }
-.fl-routine-card::after  { bottom: -1px; right: -1px; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
-.fl-routine-name { font-size: 19px; font-weight: 700; color: var(--fl-text); margin-bottom: 8px; }
-.fl-routine-meta { font-size: 13.5px; color: var(--fl-muted); }
+.fl-modal-groups { font-size: 13px; color: var(--fl-amber); margin-bottom: 14px; }
+.fl-modal-ex-row { font-size: 14px; color: var(--fl-text); padding: 8px 0; border-top: 1px solid var(--fl-border); }
+.fl-modal-ex-row:first-child { border-top: 0; }
 </style>
 </head>
 <body class="hud-grid">
@@ -284,100 +220,60 @@ button, input, select { font-family: var(--font); }
 
   <div class="fl-summary-strip">
     <div class="fl-summary-stat"><div class="k">this week</div><div class="v" id="statWorkouts">0</div><div class="u">workouts</div></div>
-    <div class="fl-summary-stat"><div class="k">streak</div><div class="v teal" id="statStreak">0</div><div class="u">days</div></div>
-    <div class="fl-summary-stat"><div class="k">volume trend</div><div class="v teal" id="statTrend">— 0%</div></div>
+    <div class="fl-summary-stat"><div class="k">streak</div><div class="v" id="statStreak">0</div><div class="u">days</div></div>
   </div>
 
+  <button class="fl-log-btn" id="logWorkoutBtn" type="button">+ log workout</button>
+
+  <div class="fl-section-title"><span class="diamond">◆</span>workout history</div>
   <div class="fl-card">
-    <div class="fl-card-head"><span class="fl-card-title"><span class="diamond">◆</span>volume — last 6 weeks</span></div>
-    <div id="homeVolumeChart"></div>
+    <ul class="fl-history-list" id="historyList"></ul>
   </div>
-
-  <div class="fl-section-title"><span class="diamond">◆</span>routines</div>
-  <div class="fl-routines-grid" id="routinesGrid"></div>
 </div>
 
 <!-- ============================================================
-     ROUTINE — browse, log, and manage its exercises
+     LOG WORKOUT — pick muscle group(s), pick exercises, log
      ============================================================ -->
-<div class="page" id="pageRoutine" hidden>
-  <button class="fl-back-link" id="routineBackLink" type="button">‹ fitness home</button>
+<div class="page" id="pageLog" hidden>
+  <button class="fl-back-link" id="logBackLink" type="button">‹ fitness home</button>
   <div class="fl-header">
-    <h1 class="fl-title" id="routineTitle" style="font-size:26px">Routine</h1>
-  </div>
-
-  <div class="fl-cols">
-    <div class="fl-card">
-      <div class="fl-card-head"><span class="fl-card-title"><span class="diamond">◆</span>exercises</span></div>
-      <ul class="fl-ex-list" id="routineExList"></ul>
-      <button class="fl-add-ex-btn" id="routineAddExBtn" type="button">+ add exercise</button>
-    </div>
-
-    <div class="fl-card">
-      <div class="fl-card-head">
-        <span class="fl-card-title"><span class="diamond">◆</span><span id="logTitle">select an exercise</span> · log set</span>
-      </div>
-      <div class="fl-log-fields">
-        <div class="fl-field">
-          <label id="weightLabel">weight (lb)</label>
-          <input type="number" id="weightInput" inputmode="decimal" placeholder="0">
-        </div>
-        <div class="fl-field">
-          <label>reps</label>
-          <input type="number" id="repsInput" inputmode="numeric" placeholder="0">
-        </div>
-        <div class="fl-unit-toggle" id="unitToggle">
-          <button data-unit="lb" class="on" type="button">lb</button>
-          <button data-unit="kg" type="button">kg</button>
-        </div>
-        <button class="fl-add-btn" id="addSetBtn" type="button">+ log set</button>
-      </div>
-      <div class="fl-sets-label">sets today</div>
-      <ul class="fl-set-list" id="setList"></ul>
-    </div>
+    <h1 class="fl-title" style="font-size:26px">Log a workout</h1>
   </div>
 
   <div class="fl-card">
-    <div class="fl-card-head">
-      <span class="fl-card-title"><span class="diamond">◆</span><span id="progTitle">select an exercise</span> · progress</span>
-      <button class="fl-link" id="historyLink" type="button">full history ›</button>
-    </div>
-    <div id="progressBody"></div>
+    <div class="fl-card-title"><span class="diamond">◆</span>muscle groups</div>
+    <div class="fl-chip-row" id="groupChips"></div>
   </div>
-</div>
 
-<!-- ============================================================
-     Modals
-     ============================================================ -->
-<div class="fl-modal-bg" id="pickerModal">
-  <div class="fl-modal">
-    <div class="fl-modal-head">
-      <h3>Add exercise to this routine</h3>
-      <button class="fl-modal-close" id="pickerModalClose" type="button">&times;</button>
-    </div>
-    <input type="text" class="fl-search-input" id="pickerSearch" placeholder="Search exercises…">
-    <div class="fl-tabs" id="pickerTabs"></div>
-    <ul class="fl-ex-list" id="pickerList"></ul>
-    <button class="fl-add-ex-btn" id="pickerAddCustomBtn" type="button">+ create new exercise</button>
-    <div class="fl-add-ex-form" id="pickerAddCustomForm" hidden>
-      <input type="text" id="pickerNewExName" class="fl-add-ex-input" placeholder="Exercise name" autocomplete="off">
-      <select id="pickerNewExGroup" class="fl-add-ex-select">
+  <div class="fl-card">
+    <div class="fl-card-title"><span class="diamond">◆</span>exercises</div>
+    <ul class="fl-ex-list" id="logExList"></ul>
+    <button class="fl-add-ex-btn" id="addCustomBtn" type="button">+ add custom exercise</button>
+    <div class="fl-add-ex-form" id="addCustomForm" hidden>
+      <input type="text" id="newExName" class="fl-add-ex-input" placeholder="Exercise name" autocomplete="off">
+      <select id="newExGroup" class="fl-add-ex-select">
         <option value="chest">chest</option><option value="back">back</option><option value="legs">legs</option>
         <option value="shoulders">shoulders</option><option value="arms">arms</option><option value="core">core</option>
       </select>
-      <button class="fl-add-ex-submit" id="pickerNewExSubmit" type="button">add</button>
-      <button class="fl-add-ex-cancel" id="pickerNewExCancel" type="button">cancel</button>
+      <button class="fl-add-ex-submit" id="newExSubmit" type="button">add</button>
+      <button class="fl-add-ex-cancel" id="newExCancel" type="button">cancel</button>
     </div>
+  </div>
+
+  <div class="fl-log-footer">
+    <span class="fl-log-count" id="logCount">0 exercises selected</span>
+    <button class="fl-log-submit" id="logSubmitBtn" type="button" disabled>Log workout</button>
   </div>
 </div>
 
-<div class="fl-modal-bg" id="historyModal">
+<div class="fl-modal-bg" id="dayDetailModal">
   <div class="fl-modal">
     <div class="fl-modal-head">
-      <h3 id="historyModalTitle">History</h3>
-      <button class="fl-modal-close" id="historyModalClose" type="button">&times;</button>
+      <h3 id="dayDetailTitle">Workout</h3>
+      <button class="fl-modal-close" id="dayDetailClose" type="button">&times;</button>
     </div>
-    <div id="historyBody"></div>
+    <div class="fl-modal-groups" id="dayDetailGroups"></div>
+    <div id="dayDetailBody"></div>
   </div>
 </div>
 
@@ -443,13 +339,6 @@ button, input, select { font-family: var(--font); }
     { name: 'Russian Twist', muscle_group: 'core', equipment: 'bodyweight' },
   ].map(e => Object.assign({ id: slugify(e.name) }, e));
 
-  const SEED_ROUTINES = [
-    { name: 'Chest / Triceps', exercises: ['Bench Press', 'Incline Bench Press', 'Dumbbell Press', 'Cable Fly', 'Dips', 'Tricep Pushdown', 'Skull Crushers'] },
-    { name: 'Arms', exercises: ['Barbell Curl', 'Dumbbell Curl', 'Hammer Curl', 'Preacher Curl', 'Cable Curl'] },
-    { name: 'Back / Shoulders', exercises: ['Deadlift', 'Pull-ups', 'Barbell Row', 'Lat Pulldown', 'Seated Cable Row', 'Overhead Press', 'Lateral Raise', 'Face Pull'] },
-    { name: 'Legs / Abs', exercises: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Lunges', 'Leg Curl', 'Leg Extension', 'Calf Raise', 'Hanging Leg Raise', 'Cable Crunch'] },
-  ].map(r => ({ id: slugify(r.name), name: r.name, exercise_ids: r.exercises.map(slugify) }));
-
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function todayKey() {
     const d = new Date();
@@ -458,7 +347,7 @@ button, input, select { font-family: var(--font); }
   function dateKeyOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function fmtDateShort(dateKey) {
     const d = new Date(dateKey + 'T00:00:00');
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
   function fmtRelative(dateKey) {
     if (!dateKey) return 'never';
@@ -469,19 +358,17 @@ button, input, select { font-family: var(--font); }
     if (days === 1) return 'yesterday';
     return days + ' days ago';
   }
+  function fmtGroups(groups) {
+    return groups.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ');
+  }
 
   /* ============ State ============ */
   let exerciseLibrary = [];
-  let routines = [];
-  let fitnessSets = [];
+  let fitnessLogs = []; // [{ id, date, created_at, muscle_groups: [...], exercise_ids: [...] }]
 
   let currentView = 'home';
-  let activeRoutineId = null;
-  let activeExerciseId = null;
-  let activeUnit = 'lb';
-
-  let pickerGroup = 'chest';
-  let pickerQuery = '';
+  let selectedGroups = new Set();
+  let selectedExercises = new Set();
 
   /* ============ Storage ============ */
   async function loadLibrary() {
@@ -502,80 +389,32 @@ button, input, select { font-family: var(--font); }
     if (!c) return;
     try { await c.from('app_state').upsert({ key: 'exercise_library', data: { exercises: exerciseLibrary } }); } catch (e) {}
   }
-  async function loadRoutines() {
-    const c = client();
-    if (!c) { routines = SEED_ROUTINES; return; }
-    try {
-      const { data } = await c.from('app_state').select('data').eq('key', 'routines').maybeSingle();
-      if (data && data.data && Array.isArray(data.data.routines) && data.data.routines.length) {
-        routines = data.data.routines;
-      } else {
-        routines = SEED_ROUTINES;
-        await saveRoutines();
-      }
-    } catch (e) { routines = SEED_ROUTINES; }
-  }
-  async function saveRoutines() {
-    const c = client();
-    if (!c) return;
-    try { await c.from('app_state').upsert({ key: 'routines', data: { routines: routines } }); } catch (e) {}
-  }
-  async function loadSets() {
+  async function loadLogs() {
     const c = client();
     if (!c) return;
     try {
-      const { data } = await c.from('app_state').select('data').eq('key', 'fitness_sets').maybeSingle();
-      fitnessSets = (data && data.data && Array.isArray(data.data.sets)) ? data.data.sets : [];
-    } catch (e) { fitnessSets = []; }
+      const { data } = await c.from('app_state').select('data').eq('key', 'fitness_logs').maybeSingle();
+      fitnessLogs = (data && data.data && Array.isArray(data.data.logs)) ? data.data.logs : [];
+    } catch (e) { fitnessLogs = []; }
   }
-  async function saveSets() {
+  async function saveLogs() {
     const c = client();
     if (!c) return;
-    try { await c.from('app_state').upsert({ key: 'fitness_sets', data: { sets: fitnessSets } }); } catch (e) {}
+    try { await c.from('app_state').upsert({ key: 'fitness_logs', data: { logs: fitnessLogs } }); } catch (e) {}
   }
 
   /* ============ Derived data helpers ============ */
-  function exercisesInGroup(group) { return exerciseLibrary.filter(e => e.muscle_group === group); }
   function exerciseById(id) { return exerciseLibrary.find(e => e.id === id) || null; }
-  function routineById(id) { return routines.find(r => r.id === id) || null; }
-  function setsForExercise(id) { return fitnessSets.filter(s => s.exercise_id === id); }
-  function setsToday(id) { return setsForExercise(id).filter(s => s.date === todayKey()).sort((a, b) => a.set_number - b.set_number); }
-  function lastSetFor(id) {
-    const all = setsForExercise(id).slice().sort((a, b) => (a.date + String(a.set_number).padStart(3, '0')).localeCompare(b.date + String(b.set_number).padStart(3, '0')));
-    return all.length ? all[all.length - 1] : null;
+  function exercisesInGroups(groups) {
+    if (!groups.size) return [];
+    return exerciseLibrary.filter(e => groups.has(e.muscle_group));
   }
-  function lastUnitFor(id) { const last = lastSetFor(id); return (last && last.unit) || 'lb'; }
-  // Sets sharing the same date are one "workout" for progress-chart purposes.
-  function sessionsFor(id) {
-    const byDate = new Map();
-    setsForExercise(id).forEach(s => {
-      if (!byDate.has(s.date)) byDate.set(s.date, []);
-      byDate.get(s.date).push(s);
-    });
-    return Array.from(byDate.entries())
-      .map(([date, sets]) => ({ date, sets: sets.slice().sort((a, b) => a.set_number - b.set_number) }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+  function lastDoneForExercise(id) {
+    let latest = null;
+    fitnessLogs.forEach(l => { if (l.exercise_ids.indexOf(id) !== -1 && (!latest || l.date > latest)) latest = l.date; });
+    return latest;
   }
-  function uniqueExerciseId(base) {
-    const safeBase = base || 'exercise-' + Date.now();
-    let id = safeBase, n = 2;
-    while (exerciseLibrary.some(e => e.id === id)) { id = safeBase + '-' + n; n++; }
-    return id;
-  }
-  async function createCustomExercise(name, group) {
-    const entry = { id: uniqueExerciseId(slugify(name)), name: name, muscle_group: group, equipment: null };
-    exerciseLibrary.push(entry);
-    await saveLibrary();
-    return entry;
-  }
-
-  function volumeInRange(startMs, endMs) {
-    return fitnessSets.reduce((sum, s) => {
-      const t = new Date(s.date + 'T00:00:00').getTime();
-      return (t >= startMs && t < endMs) ? sum + s.weight * s.reps : sum;
-    }, 0);
-  }
-  function loggedDates() { return new Set(fitnessSets.map(s => s.date)); }
+  function loggedDates() { return new Set(fitnessLogs.map(l => l.date)); }
   function computeStreak() {
     const days = loggedDates();
     let streak = 0;
@@ -584,47 +423,18 @@ button, input, select { font-family: var(--font); }
     while (days.has(dateKeyOf(d))) { streak++; d.setDate(d.getDate() - 1); }
     return streak;
   }
-  function sixWeekVolumeSeries() {
-    const now = new Date(); now.setHours(0, 0, 0, 0);
-    const points = [];
-    for (let i = 5; i >= 0; i--) {
-      const end = now.getTime() - i * 7 * 86400000 + 86400000;
-      const start = end - 7 * 86400000;
-      points.push({ v: volumeInRange(start, end) });
-    }
-    return points;
-  }
-  function lastDoneForRoutine(routine) {
-    const ids = new Set(routine.exercise_ids);
-    let latest = null;
-    fitnessSets.forEach(s => { if (ids.has(s.exercise_id) && (!latest || s.date > latest)) latest = s.date; });
-    return latest;
+  function uniqueExerciseId(base) {
+    const safeBase = base || 'exercise-' + Date.now();
+    let id = safeBase, n = 2;
+    while (exerciseLibrary.some(e => e.id === id)) { id = safeBase + '-' + n; n++; }
+    return id;
   }
 
   /* ============ View switching ============ */
   function showView(view) {
     currentView = view;
     $('pageHome').hidden = view !== 'home';
-    $('pageRoutine').hidden = view !== 'routine';
-  }
-
-  /* ============ Chart (shared: home volume, per-exercise progress) ============ */
-  function chartSVG(points, w, h) {
-    if (!points || points.length < 2) return '';
-    const vals = points.map(p => p.v);
-    const min = Math.min(...vals), max = Math.max(...vals, min + 0.0001);
-    const n = points.length, pad = 20;
-    const xAt = i => (i / (n - 1)) * (w - pad * 2) + pad;
-    const yAt = v => (h - pad) - ((v - min) / (max - min)) * (h - pad * 2);
-    const line = points.map((p, i) => xAt(i).toFixed(1) + ',' + yAt(p.v).toFixed(1)).join(' L ');
-    const dots = points.map((p, i) => '<circle cx="' + xAt(i).toFixed(1) + '" cy="' + yAt(p.v).toFixed(1) + '" r="4" fill="#4dd6a8"/>').join('');
-    return (
-      '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-        '<line x1="' + pad + '" y1="' + (h - pad) + '" x2="' + (w - pad) + '" y2="' + (h - pad) + '" stroke="#12232b" stroke-width="1"/>' +
-        '<path class="fl-chart-line" d="M ' + line + '" fill="none" stroke="#4dd6a8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
-        dots +
-      '</svg>'
-    );
+    $('pageLog').hidden = view !== 'log';
   }
 
   /* ============ HOME ============ */
@@ -633,306 +443,137 @@ button, input, select { font-family: var(--font); }
     const weekStart = now.getTime() - 6 * 86400000;
     const workoutsThisWeek = Array.from(loggedDates()).filter(d => new Date(d + 'T00:00:00').getTime() >= weekStart).length;
     const streak = computeStreak();
-    const thisWeekVol = volumeInRange(now.getTime() - 6 * 86400000, now.getTime() + 86400000);
-    const lastWeekVol = volumeInRange(now.getTime() - 13 * 86400000, now.getTime() - 6 * 86400000);
-    let trendText = '— 0%', trendUp = false;
-    if (lastWeekVol > 0) {
-      const pct = Math.round(((thisWeekVol - lastWeekVol) / lastWeekVol) * 100);
-      trendUp = pct > 0;
-      trendText = (pct > 0 ? '▲ ' : (pct < 0 ? '▼ ' : '— ')) + Math.abs(pct) + '%';
-    } else if (thisWeekVol > 0) {
-      trendText = '▲ new'; trendUp = true;
-    }
     $('statWorkouts').textContent = workoutsThisWeek;
     $('statStreak').textContent = streak;
-    $('statTrend').textContent = trendText;
-    $('statTrend').classList.toggle('teal', trendUp);
     $('homeStreakBadge').textContent = streak + ' day streak';
-
-    const series = sixWeekVolumeSeries();
-    const hasData = series.some(p => p.v > 0);
-    $('homeVolumeChart').innerHTML = hasData
-      ? '<div class="fl-chart-wrap">' + chartSVG(series, 900, 140) + '</div>'
-      : '<div class="fl-empty">No workouts logged yet — volume will show up here once you do.</div>';
   }
-  function renderRoutinesGrid() {
-    $('routinesGrid').innerHTML = routines.map(r => {
-      const lastText = fmtRelative(lastDoneForRoutine(r));
-      return (
-        '<div class="fl-routine-card" data-id="' + r.id + '">' +
-          '<div class="fl-routine-name">' + escapeHtml(r.name) + '</div>' +
-          '<div class="fl-routine-meta">' + r.exercise_ids.length + ' exercises · last: ' + lastText + '</div>' +
-        '</div>'
-      );
-    }).join('');
+  function renderHistoryList() {
+    const sorted = fitnessLogs.slice().sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    $('historyList').innerHTML = sorted.length ? sorted.map(l => (
+      '<li class="fl-history-row" data-id="' + l.id + '">' +
+        '<div><div class="fl-history-date">' + fmtDateShort(l.date) + '</div><div class="fl-history-groups">' + escapeHtml(fmtGroups(l.muscle_groups)) + '</div></div>' +
+        '<span class="fl-history-meta">' + fmtRelative(l.date) + ' · ' + l.exercise_ids.length + ' exercises</span>' +
+      '</li>'
+    )).join('') : '<li class="fl-empty">No workouts logged yet.</li>';
   }
   function renderHome() {
     renderHomeSummary();
-    renderRoutinesGrid();
+    renderHistoryList();
   }
-  $('routinesGrid').addEventListener('click', (e) => {
-    const card = e.target.closest('.fl-routine-card');
-    if (card) openRoutine(card.dataset.id);
+  $('historyList').addEventListener('click', (e) => {
+    const row = e.target.closest('.fl-history-row');
+    if (row) openDayDetail(row.dataset.id);
   });
+  $('logWorkoutBtn').addEventListener('click', openLogScreen);
 
-  /* ============ ROUTINE screen: browse, log, manage ============ */
-  function openRoutine(routineId) {
-    const routine = routineById(routineId);
-    if (!routine) return;
-    activeRoutineId = routineId;
-    activeExerciseId = routine.exercise_ids[0] || null;
-    activeUnit = activeExerciseId ? lastUnitFor(activeExerciseId) : 'lb';
-    showView('routine');
-    renderRoutine();
+  /* ============ LOG WORKOUT screen ============ */
+  function openLogScreen() {
+    selectedGroups = new Set();
+    selectedExercises = new Set();
+    showView('log');
+    renderLogScreen();
   }
-  function renderRoutineExList() {
-    const routine = routineById(activeRoutineId);
-    if (!routine) return;
-    $('routineTitle').textContent = routine.name;
-    $('routineExList').innerHTML = routine.exercise_ids.length ? routine.exercise_ids.map((id, i) => {
-      const ex = exerciseById(id);
-      if (!ex) return '';
-      const last = lastSetFor(id);
-      const lastText = last ? ('last: ' + last.weight + ' ' + last.unit + ' × ' + last.reps) : 'last: —';
+  function renderGroupChips() {
+    $('groupChips').innerHTML = MUSCLE_GROUPS.map(g =>
+      '<button class="fl-chip' + (selectedGroups.has(g) ? ' on' : '') + '" data-group="' + g + '" type="button">' + g + '</button>'
+    ).join('');
+  }
+  function renderLogExList() {
+    const list = exercisesInGroups(selectedGroups);
+    $('logExList').innerHTML = list.length ? list.map(ex => {
+      const last = lastDoneForExercise(ex.id);
+      const checked = selectedExercises.has(ex.id);
       return (
-        '<li class="fl-ex-row' + (id === activeExerciseId ? ' on' : '') + '" data-id="' + id + '">' +
+        '<li class="fl-ex-row' + (checked ? ' checked' : '') + '" data-id="' + ex.id + '">' +
+          '<span class="fl-ex-checkbox">✓</span>' +
           '<span class="fl-ex-name">' + escapeHtml(ex.name) + '</span>' +
-          '<span class="fl-ex-last">' + escapeHtml(lastText) + '</span>' +
-          '<span class="fl-ex-row-actions">' +
-            '<button class="fl-ex-move" data-dir="up" data-id="' + id + '" ' + (i === 0 ? 'disabled' : '') + ' aria-label="Move up">↑</button>' +
-            '<button class="fl-ex-move" data-dir="down" data-id="' + id + '" ' + (i === routine.exercise_ids.length - 1 ? 'disabled' : '') + ' aria-label="Move down">↓</button>' +
-            '<button class="fl-ex-remove" data-id="' + id + '" aria-label="Remove">&times;</button>' +
-          '</span>' +
+          '<span class="fl-ex-meta">last: ' + escapeHtml(fmtRelative(last)) + '</span>' +
         '</li>'
       );
-    }).join('') : '<li class="fl-empty">No exercises yet — add some below.</li>';
+    }).join('') : '<li class="fl-empty">Select a muscle group above to see its exercises.</li>';
   }
-  function renderLogPanel() {
-    const ex = exerciseById(activeExerciseId);
-    $('logTitle').textContent = ex ? ex.name : 'select an exercise';
-    $('progTitle').textContent = ex ? ex.name : 'select an exercise';
-    $('weightLabel').textContent = 'weight (' + activeUnit + ')';
-    $('unitToggle').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.unit === activeUnit));
-
-    const today = ex ? setsToday(ex.id) : [];
-    const rows = today.map(s =>
-      '<li class="fl-set-row"><span class="num">set ' + s.set_number + '</span><span class="val">' + s.weight + ' ' + s.unit + ' × ' + s.reps + '</span><button class="fl-set-del" data-id="' + s.id + '" aria-label="Delete">&times;</button></li>'
-    ).join('');
-    const placeholder = ex ? '<li class="fl-set-row placeholder"><span class="num">set ' + (today.length + 1) + '</span><span>—</span></li>' : '';
-    $('setList').innerHTML = rows + placeholder;
+  function renderLogFooter() {
+    const n = selectedExercises.size;
+    $('logCount').textContent = n + ' exercise' + (n === 1 ? '' : 's') + ' selected';
+    $('logSubmitBtn').disabled = n === 0;
   }
-  function renderProgress() {
-    const ex = exerciseById(activeExerciseId);
-    const body = $('progressBody');
-    if (!ex) { body.innerHTML = '<div class="fl-empty">Select an exercise to see its progress.</div>'; return; }
-    const sessions = sessionsFor(ex.id);
-    if (!sessions.length) {
-      body.innerHTML = '<div class="fl-empty">No sets logged yet for ' + escapeHtml(ex.name) + '.</div>';
-      return;
-    }
-    const cutoff = Date.now() - 56 * 86400000;
-    let windowed = sessions.filter(s => new Date(s.date + 'T00:00:00').getTime() >= cutoff);
-    if (windowed.length < 2) windowed = sessions;
-    const points = windowed.map(s => ({ date: s.date, v: Math.max(...s.sets.map(x => x.weight)) }));
-
-    const latestSession = sessions[sessions.length - 1];
-    const topSet = Math.max(...fitnessSets.filter(s => s.exercise_id === ex.id).map(s => s.weight));
-    const totalVolume = latestSession.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
-    const unit = latestSession.sets[0].unit || 'lb';
-    const change = points.length >= 2 ? (points[points.length - 1].v - points[0].v) : 0;
-    const changeSign = change > 0 ? '▲' : (change < 0 ? '▼' : '');
-
-    let chartHtml = '<div class="fl-empty">Log at least two workouts to chart a trend.</div>';
-    let axisHtml = '';
-    if (points.length >= 2) {
-      chartHtml = '<div class="fl-chart-wrap">' + chartSVG(points, 900, 190) + '</div>';
-      axisHtml = '<div class="fl-chart-axis"><span>' + fmtDateShort(points[0].date) + '</span><span>today</span></div>';
-    }
-    body.innerHTML = (
-      chartHtml + axisHtml +
-      '<div class="fl-stats-row">' +
-        '<div class="fl-stat"><div class="k">top set</div><div class="v">' + topSet + ' ' + unit + '</div></div>' +
-        '<div class="fl-stat"><div class="k">total volume</div><div class="v">' + totalVolume.toLocaleString() + ' ' + unit + '</div></div>' +
-        '<div class="fl-stat"><div class="k">since ' + fmtDateShort(points[0].date) + '</div><div class="v' + (change > 0 ? ' up' : '') + '">' + changeSign + ' ' + Math.abs(change) + ' ' + unit + '</div></div>' +
-      '</div>'
-    );
+  function renderLogScreen() {
+    renderGroupChips();
+    renderLogExList();
+    renderLogFooter();
   }
-  function renderRoutine() {
-    renderRoutineExList();
-    renderLogPanel();
-    renderProgress();
-  }
-  $('routineBackLink').addEventListener('click', () => { showView('home'); renderHome(); });
-  $('routineExList').addEventListener('click', async (e) => {
-    const moveBtn = e.target.closest('.fl-ex-move');
-    if (moveBtn && !moveBtn.disabled) {
-      const routine = routineById(activeRoutineId);
-      const ids = routine.exercise_ids;
-      const i = ids.indexOf(moveBtn.dataset.id);
-      const j = moveBtn.dataset.dir === 'up' ? i - 1 : i + 1;
-      if (j >= 0 && j < ids.length) {
-        [ids[i], ids[j]] = [ids[j], ids[i]];
-        await saveRoutines();
-        renderRoutineExList();
-      }
-      return;
-    }
-    const rmBtn = e.target.closest('.fl-ex-remove');
-    if (rmBtn) {
-      const routine = routineById(activeRoutineId);
-      routine.exercise_ids = routine.exercise_ids.filter(x => x !== rmBtn.dataset.id);
-      await saveRoutines();
-      if (activeExerciseId === rmBtn.dataset.id) {
-        activeExerciseId = routine.exercise_ids[0] || null;
-        activeUnit = activeExerciseId ? lastUnitFor(activeExerciseId) : 'lb';
-      }
-      renderRoutine();
-      return;
-    }
-    const row = e.target.closest('.fl-ex-row');
-    if (row) {
-      activeExerciseId = row.dataset.id;
-      activeUnit = lastUnitFor(activeExerciseId);
-      renderRoutine();
-    }
+  $('logBackLink').addEventListener('click', () => { showView('home'); renderHome(); });
+  $('groupChips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.fl-chip'); if (!chip) return;
+    const g = chip.dataset.group;
+    if (selectedGroups.has(g)) selectedGroups.delete(g); else selectedGroups.add(g);
+    renderGroupChips();
+    renderLogExList();
   });
-  $('unitToggle').addEventListener('click', (e) => {
-    const btn = e.target.closest('button'); if (!btn) return;
-    activeUnit = btn.dataset.unit;
-    renderLogPanel();
-  });
-  $('setList').addEventListener('click', async (e) => {
-    const btn = e.target.closest('.fl-set-del'); if (!btn) return;
-    fitnessSets = fitnessSets.filter(s => s.id !== btn.dataset.id);
-    await saveSets();
-    renderRoutine();
-  });
-  async function addSet() {
-    if (!activeExerciseId) return;
-    const weight = parseFloat($('weightInput').value);
-    const reps = parseInt($('repsInput').value, 10);
-    if (!(weight >= 0) || !(reps >= 0)) return;
-    const today = setsToday(activeExerciseId);
-    const entry = {
-      id: 'fs' + Date.now() + Math.random().toString(36).slice(2, 6),
-      exercise_id: activeExerciseId, date: todayKey(), set_number: today.length + 1,
-      weight: weight, reps: reps, unit: activeUnit,
-    };
-    fitnessSets.push(entry);
-    await saveSets(); // one set = one write, nothing lost if interrupted
-    renderRoutine();
-    $('repsInput').value = '';
-    $('weightInput').focus();
-  }
-  $('addSetBtn').addEventListener('click', addSet);
-  $('repsInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addSet(); });
-  $('weightInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addSet(); });
-
-  /* ============ Exercise picker (add exercise to routine) ============ */
-  function pickerRowsHTML(group, query, excludeIds) {
-    let list = exercisesInGroup(group);
-    if (query) {
-      const q = query.toLowerCase();
-      list = exerciseLibrary.filter(e => e.name.toLowerCase().indexOf(q) !== -1);
-    }
-    if (!list.length) return '<li class="fl-empty">No exercises found.</li>';
-    return list.map(ex => {
-      const last = lastSetFor(ex.id);
-      const lastText = last ? ('last: ' + last.weight + ' ' + last.unit + ' × ' + last.reps) : 'last: —';
-      const already = excludeIds && excludeIds.indexOf(ex.id) !== -1;
-      return (
-        '<li class="fl-ex-row' + (already ? ' added' : '') + '" data-id="' + ex.id + '">' +
-          '<span class="fl-ex-name">' + escapeHtml(ex.name) + (already ? '<span class="fl-ex-added-tag">in routine</span>' : '') + '</span>' +
-          '<span class="fl-ex-last">' + escapeHtml(lastText) + '</span>' +
-        '</li>'
-      );
-    }).join('');
-  }
-  function renderPickerModal() {
-    $('pickerTabs').innerHTML = MUSCLE_GROUPS.map(g =>
-      '<button class="fl-tab' + (g === pickerGroup && !pickerQuery ? ' on' : '') + '" data-group="' + g + '" type="button">' + g + '</button>'
-    ).join('');
-    const routine = routineById(activeRoutineId);
-    $('pickerList').innerHTML = pickerRowsHTML(pickerGroup, pickerQuery, routine ? routine.exercise_ids : []);
-  }
-  function openPickerModal() {
-    pickerGroup = 'chest'; pickerQuery = '';
-    $('pickerSearch').value = '';
-    renderPickerModal();
-    $('pickerModal').classList.add('show');
-  }
-  function closePickerModal() { $('pickerModal').classList.remove('show'); $('pickerAddCustomForm').hidden = true; $('pickerAddCustomBtn').hidden = false; }
-  $('routineAddExBtn').addEventListener('click', openPickerModal);
-  $('pickerModalClose').addEventListener('click', closePickerModal);
-  $('pickerModal').addEventListener('click', (e) => { if (e.target.id === 'pickerModal') closePickerModal(); });
-  $('pickerTabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.fl-tab'); if (!btn) return;
-    pickerGroup = btn.dataset.group; pickerQuery = ''; $('pickerSearch').value = '';
-    renderPickerModal();
-  });
-  $('pickerSearch').addEventListener('input', (e) => { pickerQuery = e.target.value.trim(); renderPickerModal(); });
-  $('pickerList').addEventListener('click', async (e) => {
+  $('logExList').addEventListener('click', (e) => {
     const row = e.target.closest('.fl-ex-row'); if (!row) return;
     const id = row.dataset.id;
-    const routine = routineById(activeRoutineId);
-    if (routine && routine.exercise_ids.indexOf(id) === -1) {
-      routine.exercise_ids.push(id);
-      await saveRoutines();
-      activeExerciseId = id;
-      activeUnit = lastUnitFor(id);
-      renderRoutine();
-    }
-    closePickerModal();
+    if (selectedExercises.has(id)) selectedExercises.delete(id); else selectedExercises.add(id);
+    renderLogExList();
+    renderLogFooter();
   });
-  $('pickerAddCustomBtn').addEventListener('click', () => {
-    $('pickerNewExGroup').value = pickerGroup;
-    $('pickerAddCustomForm').hidden = false;
-    $('pickerAddCustomBtn').hidden = true;
-    $('pickerNewExName').focus();
+  $('addCustomBtn').addEventListener('click', () => {
+    $('newExGroup').value = selectedGroups.size ? Array.from(selectedGroups)[0] : 'chest';
+    $('addCustomForm').hidden = false;
+    $('addCustomBtn').hidden = true;
+    $('newExName').focus();
   });
-  $('pickerNewExCancel').addEventListener('click', () => { $('pickerAddCustomForm').hidden = true; $('pickerAddCustomBtn').hidden = false; });
-  async function submitPickerNewEx() {
-    const name = $('pickerNewExName').value.trim();
-    const group = $('pickerNewExGroup').value;
-    if (!name) { $('pickerNewExName').focus(); return; }
-    const entry = await createCustomExercise(name, group);
-    const routine = routineById(activeRoutineId);
-    if (routine) {
-      routine.exercise_ids.push(entry.id);
-      await saveRoutines();
-      activeExerciseId = entry.id;
-      activeUnit = 'lb';
-      renderRoutine();
-    }
-    $('pickerNewExName').value = '';
-    closePickerModal();
+  $('newExCancel').addEventListener('click', () => { $('addCustomForm').hidden = true; $('addCustomBtn').hidden = false; });
+  async function submitNewEx() {
+    const name = $('newExName').value.trim();
+    const group = $('newExGroup').value;
+    if (!name) { $('newExName').focus(); return; }
+    const entry = { id: uniqueExerciseId(slugify(name)), name: name, muscle_group: group, equipment: null };
+    exerciseLibrary.push(entry);
+    await saveLibrary();
+    selectedGroups.add(group);
+    selectedExercises.add(entry.id);
+    $('newExName').value = '';
+    $('addCustomForm').hidden = true;
+    $('addCustomBtn').hidden = false;
+    renderLogScreen();
   }
-  $('pickerNewExSubmit').addEventListener('click', submitPickerNewEx);
-  $('pickerNewExName').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPickerNewEx(); });
+  $('newExSubmit').addEventListener('click', submitNewEx);
+  $('newExName').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNewEx(); });
+  $('logSubmitBtn').addEventListener('click', async () => {
+    if (!selectedExercises.size) return;
+    const entry = {
+      id: 'wl' + Date.now(),
+      date: todayKey(),
+      created_at: Date.now(),
+      muscle_groups: Array.from(selectedGroups.size ? selectedGroups : new Set(Array.from(selectedExercises).map(id => { const ex = exerciseById(id); return ex ? ex.muscle_group : null; }).filter(Boolean))),
+      exercise_ids: Array.from(selectedExercises),
+    };
+    fitnessLogs.push(entry);
+    await saveLogs();
+    showView('home');
+    renderHome();
+  });
 
-  /* ============ Full history modal (per exercise) ============ */
-  function openHistory() {
-    const ex = exerciseById(activeExerciseId);
-    if (!ex) return;
-    $('historyModalTitle').textContent = ex.name + ' — full history';
-    const sessions = sessionsFor(ex.id).slice().reverse();
-    $('historyBody').innerHTML = sessions.length ? sessions.map(s => (
-      '<div class="fl-session-block">' +
-        '<div class="fl-session-date">' + fmtDateShort(s.date) + '</div>' +
-        s.sets.map(set => '<div class="fl-session-set">set ' + set.set_number + ' — <b>' + set.weight + ' ' + set.unit + '</b> × ' + set.reps + '</div>').join('') +
-      '</div>'
-    )).join('') : '<div class="fl-empty">No history yet.</div>';
-    $('historyModal').classList.add('show');
+  /* ============ Day detail (read-only) ============ */
+  function openDayDetail(logId) {
+    const l = fitnessLogs.find(x => x.id === logId);
+    if (!l) return;
+    $('dayDetailTitle').textContent = fmtDateShort(l.date);
+    $('dayDetailGroups').textContent = fmtGroups(l.muscle_groups);
+    $('dayDetailBody').innerHTML = l.exercise_ids.map(id => {
+      const ex = exerciseById(id);
+      return '<div class="fl-modal-ex-row">' + escapeHtml(ex ? ex.name : 'Exercise') + '</div>';
+    }).join('') || '<div class="fl-empty">No exercises recorded.</div>';
+    $('dayDetailModal').classList.add('show');
   }
-  $('historyLink').addEventListener('click', openHistory);
-  $('historyModalClose').addEventListener('click', () => $('historyModal').classList.remove('show'));
-  $('historyModal').addEventListener('click', (e) => { if (e.target.id === 'historyModal') $('historyModal').classList.remove('show'); });
+  $('dayDetailClose').addEventListener('click', () => $('dayDetailModal').classList.remove('show'));
+  $('dayDetailModal').addEventListener('click', (e) => { if (e.target.id === 'dayDetailModal') $('dayDetailModal').classList.remove('show'); });
 
   /* ============ Boot ============ */
   async function boot() {
     await loadLibrary();
-    await loadRoutines();
-    await loadSets();
+    await loadLogs();
     showView('home');
     renderHome();
   }
