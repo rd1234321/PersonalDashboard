@@ -31,7 +31,7 @@ html, body {
   font-family: var(--font); font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 body { min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 20px 60px; }
-.page { max-width: 900px; margin: 0 auto; }
+.page { max-width: 1400px; margin: 0 auto; }
 .page[hidden] { display: none; }
 button, input, select { font-family: var(--font); }
 
@@ -40,23 +40,43 @@ button, input, select { font-family: var(--font); }
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 20px; flex-wrap: wrap; margin-bottom: 22px;
 }
+.fl-title-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .fl-title {
   margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.01em;
   line-height: 1.1; color: var(--fl-text);
 }
 .fl-streak-badge {
-  display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--fl-teal); font-weight: 700;
+  display: inline-flex; align-items: center; gap: 9px; font-size: 14px; color: var(--fl-muted);
 }
 .fl-streak-dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--fl-teal);
   box-shadow: 0 0 6px var(--fl-teal); animation: fl-pulse 2.2s ease-in-out infinite;
 }
 @keyframes fl-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.fl-header-btn {
+  padding: 13px 22px; border: 1px solid var(--fl-border-2); border-radius: 10px;
+  background: transparent; color: var(--fl-text);
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.fl-header-btn:hover { border-color: var(--fl-cyan); background: rgba(63,217,255,0.06); }
 .fl-back-link {
   background: none; border: 0; color: var(--fl-muted); font-size: 13.5px; cursor: pointer; padding: 0;
   margin-bottom: 14px; display: inline-block;
 }
 .fl-back-link:hover { color: var(--fl-cyan); }
+
+/* ----- muscle group tabs (underline style, multi-select toggle) ----- */
+.fl-tabs {
+  display: flex; gap: 24px; border-bottom: 1px solid var(--fl-border); margin-bottom: 4px;
+  overflow-x: auto;
+}
+.fl-tab {
+  background: none; border: 0; padding: 9px 2px 12px; margin-bottom: -1px;
+  font-size: 15px; color: var(--fl-muted); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+}
+.fl-tab:hover { color: var(--fl-text); }
+.fl-tab.on { color: var(--fl-cyan); border-bottom-color: var(--fl-cyan); font-weight: 700; }
 
 /* ----- section title (no box, just a label + divider line) ----- */
 .fl-section-title {
@@ -119,15 +139,6 @@ button, input, select { font-family: var(--font); }
 .fl-history-groups { font-size: 13px; color: var(--fl-amber); margin-top: 3px; }
 .fl-history-meta { font-size: 13.5px; color: var(--fl-muted); text-align: right; white-space: nowrap; }
 
-/* ----- log-workout screen: muscle group chips ----- */
-.fl-chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
-.fl-chip {
-  padding: 10px 16px; border: 1px solid var(--fl-border-2); border-radius: 20px; background: transparent;
-  color: var(--fl-muted); font-size: 14px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.fl-chip:hover { border-color: var(--fl-cyan); color: var(--fl-text); }
-.fl-chip.on { background: rgba(63,217,255,0.14); border-color: var(--fl-cyan); color: var(--fl-cyan); font-weight: 700; }
-
 /* ----- exercise checklist ----- */
 .fl-ex-list { list-style: none; margin: 0; padding: 0; }
 .fl-ex-row {
@@ -144,6 +155,11 @@ button, input, select { font-family: var(--font); }
 .fl-ex-row.checked .fl-ex-checkbox { background: var(--fl-teal); border-color: var(--fl-teal); color: #02040a; font-weight: 700; font-size: 13px; }
 .fl-ex-name { font-size: 16px; color: var(--fl-text); flex: 1; }
 .fl-ex-meta { font-size: 12.5px; color: var(--fl-muted); white-space: nowrap; }
+.fl-ex-delete {
+  background: none; border: 1px solid var(--fl-border-2); border-radius: 6px; color: var(--fl-muted);
+  font-size: 14px; cursor: pointer; padding: 4px 8px; flex-shrink: 0; transition: color 0.15s, border-color 0.15s;
+}
+.fl-ex-delete:hover { color: var(--fl-red); border-color: var(--fl-red); }
 
 .fl-add-ex-btn {
   width: 100%; text-align: left; margin-top: 12px; padding: 13px 12px;
@@ -214,16 +230,17 @@ button, input, select { font-family: var(--font); }
      ============================================================ -->
 <div class="page" id="pageHome">
   <div class="fl-header">
-    <h1 class="fl-title">fitness</h1>
-    <div class="fl-streak-badge"><span class="fl-streak-dot"></span><span id="homeStreakBadge">0 day streak</span></div>
+    <div class="fl-title-wrap">
+      <h1 class="fl-title">fitness<br>log</h1>
+      <div class="fl-streak-badge"><span class="fl-streak-dot"></span><span id="homeStreakBadge">0 day streak</span></div>
+    </div>
+    <button class="fl-header-btn" id="logWorkoutBtn" type="button">+ log workout</button>
   </div>
 
   <div class="fl-summary-strip">
     <div class="fl-summary-stat"><div class="k">this week</div><div class="v" id="statWorkouts">0</div><div class="u">workouts</div></div>
     <div class="fl-summary-stat"><div class="k">streak</div><div class="v" id="statStreak">0</div><div class="u">days</div></div>
   </div>
-
-  <button class="fl-log-btn" id="logWorkoutBtn" type="button">+ log workout</button>
 
   <div class="fl-section-title"><span class="diamond">◆</span>workout history</div>
   <div class="fl-card">
@@ -240,10 +257,7 @@ button, input, select { font-family: var(--font); }
     <h1 class="fl-title" style="font-size:26px">Log a workout</h1>
   </div>
 
-  <div class="fl-card">
-    <div class="fl-card-title"><span class="diamond">◆</span>muscle groups</div>
-    <div class="fl-chip-row" id="groupChips"></div>
-  </div>
+  <div class="fl-tabs" id="groupChips"></div>
 
   <div class="fl-card">
     <div class="fl-card-title"><span class="diamond">◆</span>exercises</div>
@@ -475,7 +489,7 @@ button, input, select { font-family: var(--font); }
   }
   function renderGroupChips() {
     $('groupChips').innerHTML = MUSCLE_GROUPS.map(g =>
-      '<button class="fl-chip' + (selectedGroups.has(g) ? ' on' : '') + '" data-group="' + g + '" type="button">' + g + '</button>'
+      '<button class="fl-tab' + (selectedGroups.has(g) ? ' on' : '') + '" data-group="' + g + '" type="button">' + g + '</button>'
     ).join('');
   }
   function renderLogExList() {
@@ -488,6 +502,7 @@ button, input, select { font-family: var(--font); }
           '<span class="fl-ex-checkbox">✓</span>' +
           '<span class="fl-ex-name">' + escapeHtml(ex.name) + '</span>' +
           '<span class="fl-ex-meta">last: ' + escapeHtml(fmtRelative(last)) + '</span>' +
+          '<button class="fl-ex-delete" data-id="' + ex.id + '" aria-label="Remove exercise">&times;</button>' +
         '</li>'
       );
     }).join('') : '<li class="fl-empty">Select a muscle group above to see its exercises.</li>';
@@ -504,13 +519,23 @@ button, input, select { font-family: var(--font); }
   }
   $('logBackLink').addEventListener('click', () => { showView('home'); renderHome(); });
   $('groupChips').addEventListener('click', (e) => {
-    const chip = e.target.closest('.fl-chip'); if (!chip) return;
+    const chip = e.target.closest('.fl-tab'); if (!chip) return;
     const g = chip.dataset.group;
     if (selectedGroups.has(g)) selectedGroups.delete(g); else selectedGroups.add(g);
     renderGroupChips();
     renderLogExList();
   });
-  $('logExList').addEventListener('click', (e) => {
+  $('logExList').addEventListener('click', async (e) => {
+    const delBtn = e.target.closest('.fl-ex-delete');
+    if (delBtn) {
+      const id = delBtn.dataset.id;
+      exerciseLibrary = exerciseLibrary.filter(ex => ex.id !== id);
+      selectedExercises.delete(id);
+      await saveLibrary();
+      renderLogExList();
+      renderLogFooter();
+      return;
+    }
     const row = e.target.closest('.fl-ex-row'); if (!row) return;
     const id = row.dataset.id;
     if (selectedExercises.has(id)) selectedExercises.delete(id); else selectedExercises.add(id);
