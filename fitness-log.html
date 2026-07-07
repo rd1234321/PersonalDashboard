@@ -31,17 +31,58 @@ html, body {
   font-family: var(--font); font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 body { min-height: 100vh; padding: max(28px, env(safe-area-inset-top)) 20px 60px; }
-.page { max-width: 1400px; margin: 0 auto; }
+.page { max-width: 1400px; margin: 0 auto; position: relative; z-index: 1; }
 .page[hidden] { display: none; }
 button, input, select { font-family: var(--font); }
+
+/* ----- ambient background: drifting circles + breathing grid ----- */
+.fl-ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.fl-ambient-circle { position: absolute; fill: none; opacity: 0.1; }
+.fl-ambient-c1 { top: -10%; left: -8%; width: 40vw; height: 40vw; stroke: var(--fl-cyan); animation: fl-drift-a 17s ease-in-out infinite alternate; }
+.fl-ambient-c2 { bottom: -14%; right: -10%; width: 46vw; height: 46vw; stroke: var(--fl-teal); animation: fl-drift-b 19s ease-in-out infinite alternate; }
+.fl-ambient-c3 { top: 36%; right: 14%; width: 18vw; height: 18vw; stroke: var(--fl-cyan); opacity: 0.08; animation: fl-drift-a 15s ease-in-out infinite alternate; }
+@keyframes fl-drift-a { from { transform: translate(0, 0); } to { transform: translate(18px, 12px); } }
+@keyframes fl-drift-b { from { transform: translate(0, 0); } to { transform: translate(-16px, -14px); } }
+.fl-ambient-grid {
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M48 0H0V48' fill='none' stroke='%233fd9ff' stroke-width='1' opacity='0.08'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  animation: fl-grid-breathe 10s ease-in-out infinite;
+}
+@keyframes fl-grid-breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 1.3; } }
+
+/* ----- ambient scanline sweep, whole page ----- */
+.fl-scanline {
+  position: fixed; left: 0; top: 0; width: 100%; height: 2px; z-index: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(63,217,255,0.5), transparent);
+  animation: fl-scan-sweep 7s linear infinite;
+}
+@keyframes fl-scan-sweep {
+  0%   { top: 0%;   opacity: 0; }
+  6%   { opacity: 0.7; }
+  50%  { opacity: 0.7; }
+  94%  { opacity: 0; }
+  100% { top: 100%; opacity: 0; }
+}
 
 /* ----- header ----- */
 .fl-header {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 20px; flex-wrap: wrap; margin-bottom: 22px;
 }
-.fl-title-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.fl-title-wrap { position: relative; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.fl-title-ring {
+  position: absolute; top: 50%; left: 40px; width: 130px; height: 130px;
+  transform: translate(-50%, -50%); z-index: 0; pointer-events: none;
+  opacity: 0.18;
+}
+.fl-title-ring circle {
+  fill: none; stroke: var(--fl-cyan); stroke-width: 1; stroke-dasharray: 3 7;
+  animation: hud-spin 40s linear infinite;
+  transform-origin: center;
+}
 .fl-title {
+  position: relative; z-index: 1;
   margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.01em;
   line-height: 1.1; color: var(--fl-text);
 }
@@ -89,12 +130,16 @@ button, input, select { font-family: var(--font); }
 .fl-card {
   position: relative; padding: 22px 24px 24px; margin-bottom: 20px;
   border: 1px solid rgba(74,107,120,0.35); border-radius: 4px;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 .fl-card::before, .fl-card::after {
   content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+  transition: border-color 0.2s ease, filter 0.2s ease;
 }
 .fl-card::before { top: -1px; left: -1px; border-top: 1px solid var(--fl-cyan); border-left: 1px solid var(--fl-cyan); }
 .fl-card::after  { bottom: -1px; right: -1px; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
+.fl-card:hover { background: rgba(63,217,255,0.03); border-color: rgba(63,217,255,0.5); }
+.fl-card:hover::before, .fl-card:hover::after { filter: drop-shadow(0 0 4px rgba(63,217,255,0.8)); }
 .fl-card-title {
   font-size: 15px; font-weight: 700; letter-spacing: 0.01em; color: var(--fl-text);
   display: flex; align-items: center; gap: 9px; margin-bottom: 18px;
@@ -105,16 +150,20 @@ button, input, select { font-family: var(--font); }
 .fl-summary-strip {
   display: grid; grid-template-columns: repeat(2, 1fr); position: relative;
   padding: 20px 22px; margin-bottom: 20px; border: 1px solid rgba(74,107,120,0.35); border-radius: 4px;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 .fl-summary-strip::before, .fl-summary-strip::after {
   content: ''; position: absolute; width: 14px; height: 14px; pointer-events: none;
+  transition: filter 0.2s ease;
 }
 .fl-summary-strip::before { top: -1px; left: -1px; border-top: 1px solid var(--fl-cyan); border-left: 1px solid var(--fl-cyan); }
 .fl-summary-strip::after  { bottom: -1px; right: -1px; border-bottom: 1px solid var(--fl-cyan); border-right: 1px solid var(--fl-cyan); }
+.fl-summary-strip:hover { background: rgba(63,217,255,0.03); border-color: rgba(63,217,255,0.5); }
+.fl-summary-strip:hover::before, .fl-summary-strip:hover::after { filter: drop-shadow(0 0 4px rgba(63,217,255,0.8)); }
 .fl-summary-stat { text-align: center; border-left: 1px solid var(--fl-border); }
 .fl-summary-stat:first-child { border-left: 0; }
 .fl-summary-stat .k { font-size: 12px; color: var(--fl-muted); margin-bottom: 8px; }
-.fl-summary-stat .v { font-size: 26px; font-weight: 700; color: var(--fl-teal); }
+.fl-summary-stat .v { font-size: 26px; font-weight: 700; color: var(--fl-teal); text-shadow: 0 0 12px rgba(77,214,168,0.45); }
 .fl-summary-stat .u { font-size: 12px; color: var(--fl-muted); margin-top: 4px; }
 
 /* ----- log workout button ----- */
@@ -225,12 +274,21 @@ button, input, select { font-family: var(--font); }
 </head>
 <body class="hud-grid">
 
+<div class="fl-ambient" aria-hidden="true">
+  <div class="fl-ambient-grid"></div>
+  <svg class="fl-ambient-circle fl-ambient-c1" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" stroke-width="0.6"/></svg>
+  <svg class="fl-ambient-circle fl-ambient-c2" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" stroke-width="0.6"/></svg>
+  <svg class="fl-ambient-circle fl-ambient-c3" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" stroke-width="0.8"/></svg>
+</div>
+<div class="fl-scanline" aria-hidden="true"></div>
+
 <!-- ============================================================
      FITNESS HOME
      ============================================================ -->
 <div class="page" id="pageHome">
   <div class="fl-header">
     <div class="fl-title-wrap">
+      <svg class="fl-title-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46"/></svg>
       <h1 class="fl-title">fitness<br>log</h1>
       <div class="fl-streak-badge"><span class="fl-streak-dot"></span><span id="homeStreakBadge">0 day streak</span></div>
     </div>
