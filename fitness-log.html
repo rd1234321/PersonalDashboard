@@ -148,7 +148,7 @@ button, input, select { font-family: var(--font); }
 
 /* ----- home: summary strip ----- */
 .fl-summary-strip {
-  display: grid; grid-template-columns: repeat(2, 1fr); position: relative;
+  display: grid; grid-template-columns: repeat(3, 1fr); position: relative;
   padding: 20px 22px; margin-bottom: 20px; border: 1px solid rgba(74,107,120,0.35); border-radius: 4px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
@@ -163,7 +163,8 @@ button, input, select { font-family: var(--font); }
 .fl-summary-stat { text-align: center; border-left: 1px solid var(--fl-border); }
 .fl-summary-stat:first-child { border-left: 0; }
 .fl-summary-stat .k { font-size: 12px; color: var(--fl-muted); margin-bottom: 8px; }
-.fl-summary-stat .v { font-size: 26px; font-weight: 700; color: var(--fl-teal); text-shadow: 0 0 12px rgba(77,214,168,0.45); }
+.fl-summary-stat .v { font-size: 26px; font-weight: 700; color: var(--fl-teal); }
+.fl-summary-stat.fl-glow .v { text-shadow: 0 0 12px rgba(77,214,168,0.45); }
 .fl-summary-stat .u { font-size: 12px; color: var(--fl-muted); margin-top: 4px; }
 
 /* ----- log workout button ----- */
@@ -187,6 +188,14 @@ button, input, select { font-family: var(--font); }
 .fl-history-date { font-size: 15px; font-weight: 700; color: var(--fl-text); white-space: nowrap; }
 .fl-history-groups { font-size: 13px; color: var(--fl-amber); margin-top: 3px; }
 .fl-history-meta { font-size: 13.5px; color: var(--fl-muted); text-align: right; white-space: nowrap; }
+
+/* ----- muscle groups trained bar chart ----- */
+.fl-bar-chart { display: flex; align-items: flex-end; gap: 18px; height: 140px; padding-top: 10px; }
+.fl-bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; flex: 1; }
+.fl-bar { width: 28px; border-radius: 3px 3px 0 0; background: var(--fl-border-2); transition: height 0.4s ease; }
+.fl-bar.trained { background: var(--fl-amber); box-shadow: 0 0 10px rgba(240,168,60,0.35); }
+.fl-bar-label { margin-top: 10px; font-size: 12.5px; color: var(--fl-muted); }
+.fl-bar-label.trained { color: var(--fl-amber); font-weight: 700; }
 
 /* ----- exercise checklist ----- */
 .fl-ex-list { list-style: none; margin: 0; padding: 0; }
@@ -296,8 +305,14 @@ button, input, select { font-family: var(--font); }
   </div>
 
   <div class="fl-summary-strip">
-    <div class="fl-summary-stat"><div class="k">this week</div><div class="v" id="statWorkouts">0</div><div class="u">workouts</div></div>
-    <div class="fl-summary-stat"><div class="k">streak</div><div class="v" id="statStreak">0</div><div class="u">days</div></div>
+    <div class="fl-summary-stat fl-glow"><div class="k">this week</div><div class="v" id="statWorkouts">0</div><div class="u">workouts</div></div>
+    <div class="fl-summary-stat fl-glow"><div class="k">streak</div><div class="v" id="statStreak">0</div><div class="u">days</div></div>
+    <div class="fl-summary-stat"><div class="k">total exercises</div><div class="v" id="statTotalExercises">0</div><div class="u">logged</div></div>
+  </div>
+
+  <div class="fl-card">
+    <div class="fl-card-title"><span class="diamond">◆</span>muscle groups trained — last 7 days</div>
+    <div class="fl-bar-chart" id="groupBarChart"></div>
   </div>
 
   <div class="fl-section-title"><span class="diamond">◆</span>workout history</div>
@@ -515,9 +530,37 @@ button, input, select { font-family: var(--font); }
     const weekStart = now.getTime() - 6 * 86400000;
     const workoutsThisWeek = Array.from(loggedDates()).filter(d => new Date(d + 'T00:00:00').getTime() >= weekStart).length;
     const streak = computeStreak();
+    const totalExercisesLogged = new Set(fitnessLogs.flatMap(l => l.exercise_ids)).size;
     $('statWorkouts').textContent = workoutsThisWeek;
     $('statStreak').textContent = streak;
+    $('statTotalExercises').textContent = totalExercisesLogged;
     $('homeStreakBadge').textContent = streak + ' day streak';
+  }
+  function muscleGroupCounts7d() {
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const weekStart = now.getTime() - 6 * 86400000;
+    const counts = {};
+    MUSCLE_GROUPS.forEach(g => { counts[g] = 0; });
+    fitnessLogs.forEach(l => {
+      if (new Date(l.date + 'T00:00:00').getTime() < weekStart) return;
+      l.muscle_groups.forEach(g => { if (counts[g] != null) counts[g]++; });
+    });
+    return counts;
+  }
+  function renderGroupBarChart() {
+    const counts = muscleGroupCounts7d();
+    const max = Math.max(1, ...Object.values(counts));
+    $('groupBarChart').innerHTML = MUSCLE_GROUPS.map(g => {
+      const n = counts[g];
+      const trained = n > 0;
+      const heightPct = trained ? Math.max(14, Math.round((n / max) * 100)) : 6;
+      return (
+        '<div class="fl-bar-col">' +
+          '<div class="fl-bar' + (trained ? ' trained' : '') + '" style="height:' + heightPct + '%"></div>' +
+          '<div class="fl-bar-label' + (trained ? ' trained' : '') + '">' + g + '</div>' +
+        '</div>'
+      );
+    }).join('');
   }
   function renderHistoryList() {
     const sorted = fitnessLogs.slice().sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
@@ -530,6 +573,7 @@ button, input, select { font-family: var(--font); }
   }
   function renderHome() {
     renderHomeSummary();
+    renderGroupBarChart();
     renderHistoryList();
   }
   $('historyList').addEventListener('click', (e) => {
