@@ -626,15 +626,16 @@ main {
       return (Math.round(n * 100) / 100).toLocaleString();
     }
 
-    function displayValueUnits(name, m) {
-      return { value: m.value, units: m.units || '' };
+    function displayValueUnits(name, m, points) {
+      if (ahRange === 'day' || !points || !points.length) return { value: m.value, units: m.units || '' };
+      return { value: fmtNum(points[points.length - 1].value), units: m.units || '' };
     }
 
     function renderVitals(entries) {
       document.getElementById('ahVitals').innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[i % AH_COLORS.length];
         const points = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
-        const dv = displayValueUnits(name, m);
+        const dv = displayValueUnits(name, m, points);
         const card = (
           '<div class="ah-vital" style="--ah-c:' + color + ';animation-delay:' + (i * 0.05) + 's" data-metric="' + esc(name) + '">' +
             '<div class="ah-vital-top"><span class="ah-vital-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
@@ -653,7 +654,8 @@ main {
     function renderGridInto(containerId, entries, colorOffset) {
       document.getElementById(containerId).innerHTML = entries.map(([name, m], i) => {
         const color = AH_COLORS[(i + colorOffset) % AH_COLORS.length];
-        const dv = displayValueUnits(name, m);
+        const gridPoints = lastN(aggregateRange(m.points || [], ahRange, name), rangeCap(ahRange));
+        const dv = displayValueUnits(name, m, gridPoints);
         const card = (
           '<div class="ah-metric" style="--ah-c:' + color + ';animation-delay:' + (i * 0.04) + 's" data-metric="' + esc(name) + '">' +
             '<div class="ah-metric-top"><span class="ah-metric-label">' + esc(m.label) + '</span><span class="ah-expand-hint">expand ›</span></div>' +
@@ -684,7 +686,7 @@ main {
       } else {
         body = '<div class="ah-detail-empty">Not enough history yet to chart ' + esc(m.label.toLowerCase()) + ' over time — this fills in as more syncs come in from your phone.</div>';
       }
-      const dv = displayValueUnits(name, m);
+      const dv = displayValueUnits(name, m, points);
       let support = '';
       if (name === 'body_mass_index' && ahLastMetrics && ahLastMetrics.weight_body_mass) {
         const wm = ahLastMetrics.weight_body_mass;
